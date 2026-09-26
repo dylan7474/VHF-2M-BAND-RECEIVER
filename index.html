@@ -1,135 +1,90 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-GB">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VHF-2M Transceiver & Stream Aggregator</title>
+  <title>VHF-2M Band Receiver</title>
+  <meta name="description" content="Listen to the UK 2 metre amateur band through volunteer-run OpenWebRX receivers, with the RSGB repeater list built in.">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Inter:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 
   <style>
-    /* Custom ham radio aesthetic styles */
-    .font-lcd {
-      font-family: 'Share Tech Mono', monospace;
+    .font-lcd { font-family: 'Share Tech Mono', monospace; }
+    .font-radio { font-family: 'Chakra Petch', sans-serif; }
+    .font-sans { font-family: 'Inter', sans-serif; }
+
+    /* LCD colour themes: every LCD element reads these variables */
+    .lcd { --fg: #34d399; --bright: #d1fae5; --dim: rgba(52, 211, 153, 0.6); --line: rgba(52, 211, 153, 0.25); --bg: #0f1c18; }
+    .lcd[data-theme="amber"] { --fg: #fbbf24; --bright: #fef3c7; --dim: rgba(251, 191, 36, 0.6); --line: rgba(251, 191, 36, 0.25); --bg: #1e1305; }
+    .lcd[data-theme="blue"] { --fg: #38bdf8; --bright: #e0f2fe; --dim: rgba(56, 189, 248, 0.6); --line: rgba(56, 189, 248, 0.25); --bg: #081726; }
+    .lcd {
+      background: var(--bg);
+      color: var(--fg);
+      border: 1px solid var(--line);
+      box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.8), inset 0 0 4px var(--fg);
+      transition: background 0.3s, color 0.3s;
     }
-    .font-radio {
-      font-family: 'Chakra Petch', sans-serif;
-    }
-    .font-sans {
-      font-family: 'Inter', sans-serif;
-    }
-    
-    /* Rotary knob textured dial */
+    .lcd-bright { color: var(--bright); text-shadow: 0 0 12px var(--dim); }
+    .lcd-dim { color: var(--dim); }
+    .lcd-line { border-color: var(--line); }
+    .lcd-chip { border: 1px solid var(--line); background: rgba(0, 0, 0, 0.3); }
+    .lcd-marker { background: var(--bright); box-shadow: 0 0 6px var(--fg); }
+
     .rotary-knob {
       background: radial-gradient(circle at 35% 35%, #4a5568 0%, #1a202c 70%, #0f172a 100%);
-      box-shadow: 
-        0 6px 12px rgba(0, 0, 0, 0.6),
-        inset 0 2px 4px rgba(255, 255, 255, 0.25),
-        inset 0 -3px 6px rgba(0, 0, 0, 0.8);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.6), inset 0 2px 4px rgba(255, 255, 255, 0.25), inset 0 -3px 6px rgba(0, 0, 0, 0.8);
       user-select: none;
       touch-action: none;
     }
-
-    /* Textured Radio Chassis */
     .radio-chassis {
       background: radial-gradient(ellipse at top, #272d37, #13171f 80%);
-      box-shadow: 
-        0 20px 50px -10px rgba(0, 0, 0, 0.8),
-        inset 0 1px 2px rgba(255, 255, 255, 0.15),
-        inset 0 -2px 4px rgba(0, 0, 0, 0.6);
+      box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.8), inset 0 1px 2px rgba(255, 255, 255, 0.15), inset 0 -2px 4px rgba(0, 0, 0, 0.6);
     }
-
-    /* Backlit LCD glow */
-    .lcd-screen {
-      background: #0f1c18;
-      box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.8), inset 0 0 4px #10b981;
-    }
-    .amber-lcd {
-      background: #1e1305;
-      box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.8), inset 0 0 4px #f59e0b;
-    }
-    .blue-lcd {
-      background: #081726;
-      box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.8), inset 0 0 4px #38bdf8;
-    }
-
-    /* Custom scrollbars */
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #111827;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #374151;
-      border-radius: 3px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #4b5563;
-    }
-
-    /* CRT scanline overlay effect */
     .scanlines {
-      background: linear-gradient(
-        rgba(18, 16, 16, 0) 50%, 
-        rgba(0, 0, 0, 0.25) 50%
-      );
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
       background-size: 100% 4px;
       pointer-events: none;
     }
 
-    /* Custom range input styling */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #111827; }
+    ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+
     input[type=range]::-webkit-slider-thumb {
       -webkit-appearance: none;
-      height: 18px;
-      width: 18px;
-      border-radius: 9999px;
-      background: #38bdf8;
-      cursor: pointer;
+      height: 18px; width: 18px; border-radius: 9999px;
+      background: #38bdf8; cursor: pointer;
       box-shadow: 0 0 8px rgba(56, 189, 248, 0.7);
     }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans selection:bg-cyan-500 selection:text-black">
 
-  <header class="bg-slate-900/90 border-b border-slate-800 sticky top-0 z-40 backdrop-blur-md px-4 py-2.5 flex items-center justify-between">
-    <div class="flex items-center gap-3">
-      <div class="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+  <header class="bg-slate-900/90 border-b border-slate-800 sticky top-0 z-40 backdrop-blur-md px-4 py-2.5 flex items-center justify-between gap-3">
+    <div class="flex items-center gap-3 min-w-0">
+      <div class="w-8 h-8 shrink-0 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.14 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"></path>
         </svg>
       </div>
-      <div>
+      <div class="min-w-0">
         <h1 class="text-sm md:text-base font-bold tracking-wider font-radio text-white flex items-center gap-2">
           VHF-2M BAND RECEIVER
-          <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-700/50">144.000 - 148.000 MHz</span>
+          <span class="hidden sm:inline text-[10px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-700/50">UK · 144.000 – 146.000 MHz</span>
         </h1>
-        <p class="text-xs text-slate-400 hidden sm:block">Internet Stream Gateway & WebSDR 2-Meter Amateur Radio Console</p>
+        <p class="text-xs text-slate-400 hidden sm:block">Live 2 metre band through volunteer-run OpenWebRX receivers</p>
       </div>
     </div>
 
-    <!-- Right Controls -->
-    <div class="flex items-center gap-2">
-      <!-- LCD Color Switcher -->
+    <div class="flex items-center gap-2 shrink-0">
       <div class="flex items-center bg-slate-800/80 p-1 rounded-lg border border-slate-700">
-        <button id="themeEmerald" title="Emerald LCD" class="w-5 h-5 rounded-full bg-emerald-500 border border-emerald-300 ring-2 ring-emerald-500/50 m-0.5"></button>
-        <button id="themeAmber" title="Amber LCD" class="w-5 h-5 rounded-full bg-amber-500 border border-amber-300 m-0.5 opacity-60 hover:opacity-100"></button>
-        <button id="themeBlue" title="Ice Blue LCD" class="w-5 h-5 rounded-full bg-sky-400 border border-sky-200 m-0.5 opacity-60 hover:opacity-100"></button>
+        <button data-theme-btn="green" title="Green LCD" class="w-5 h-5 rounded-full bg-emerald-500 border border-emerald-300 m-0.5"></button>
+        <button data-theme-btn="amber" title="Amber LCD" class="w-5 h-5 rounded-full bg-amber-500 border border-amber-300 m-0.5"></button>
+        <button data-theme-btn="blue" title="Ice blue LCD" class="w-5 h-5 rounded-full bg-sky-400 border border-sky-200 m-0.5"></button>
       </div>
-
-      <!-- Add Stream Button -->
-      <button id="btnOpenCustomModal" class="text-xs px-2.5 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-medium flex items-center gap-1.5 transition shadow">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-        </svg>
-        <span>Add Feed</span>
-      </button>
-
-      <!-- WebSDR Link Info -->
-      <button id="btnOpenInfoModal" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="About 2m Band & WebSDR Sources">
+      <button id="btnOpenInfo" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="How this works">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
         </svg>
@@ -138,1405 +93,712 @@
   </header>
 
   <main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5 grid grid-cols-1 lg:grid-cols-12 gap-5">
-    
-    <!-- LEFT / TOP COLUMN: Physical Transceiver Unit -->
-    <section class="lg:col-span-8 flex flex-col gap-4">
-      
-      <!-- Transceiver Outer Case -->
-      <div class="radio-chassis rounded-2xl border-2 border-slate-700/80 p-4 sm:p-6 text-slate-200 shadow-2xl relative overflow-hidden">
-        <!-- Top Rig Badge & Brand -->
+
+    <!-- LEFT: the rig and the live receiver -->
+    <section class="lg:col-span-8 flex flex-col gap-4 min-w-0">
+
+      <div class="radio-chassis rounded-2xl border-2 border-slate-700/80 p-4 sm:p-6 text-slate-200 relative overflow-hidden">
         <div class="flex items-center justify-between border-b border-slate-700/60 pb-3 mb-4">
           <div class="flex items-center gap-2">
             <span class="text-xs font-bold tracking-widest text-slate-400 font-radio">COMM-VHF</span>
-            <span class="text-xs font-semibold px-2 py-0.5 rounded bg-slate-800 text-cyan-400 border border-slate-700">IC-2026M</span>
+            <span class="text-xs font-semibold px-2 py-0.5 rounded bg-slate-800 text-cyan-400 border border-slate-700">2M RX</span>
           </div>
-          <div class="flex items-center gap-3">
-            <div id="rxTxIndicator" class="flex items-center gap-1.5 text-xs font-mono font-bold px-2 py-0.5 rounded bg-slate-800/90 text-slate-500 border border-slate-700">
-              <span id="rxLed" class="w-2.5 h-2.5 rounded-full bg-slate-600 transition-colors"></span>
-              <span id="rxLabel">STANDBY</span>
-            </div>
-            <div class="text-[11px] text-slate-400 font-mono hidden sm:inline-block">2-METER FM/C4FM TRANSCEIVER</div>
+          <div id="rxIndicator" class="flex items-center gap-1.5 text-xs font-mono font-bold px-2 py-0.5 rounded bg-slate-800/90 text-slate-400 border border-slate-700">
+            <span id="rxLed" class="w-2.5 h-2.5 rounded-full bg-slate-600"></span>
+            <span id="rxLabel">STANDBY</span>
           </div>
         </div>
 
-        <!-- The Main LCD Display Unit -->
-        <div id="lcdContainer" class="lcd-screen rounded-xl p-3 sm:p-5 relative border border-emerald-500/30 text-emerald-400 transition-colors duration-300">
+        <!-- LCD -->
+        <div id="lcd" class="lcd rounded-xl p-3 sm:p-5 relative">
           <div class="scanlines absolute inset-0 rounded-xl"></div>
-          
-          <!-- Top LCD Info Bar -->
-          <div class="relative z-10 flex flex-wrap items-center justify-between text-xs font-lcd tracking-widest border-b border-emerald-500/20 pb-2 mb-3">
+
+          <div class="relative z-10 flex flex-wrap items-center justify-between gap-2 text-xs font-lcd tracking-widest border-b lcd-line pb-2 mb-3">
             <div class="flex items-center gap-3">
-              <span id="displayMode" class="font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/30">FM 25kHz</span>
-              <span id="displayOffset" class="text-emerald-300/80">-600 kHz</span>
-              <span id="displayTone" class="text-emerald-300/80">TONE 100.0</span>
+              <span id="lcdMode" class="font-bold lcd-chip px-1.5 py-0.5 rounded">NFM</span>
+              <span id="lcdStep" class="lcd-dim">STEP 12.5k</span>
+              <span id="lcdSql" class="lcd-dim">SQL OFF</span>
             </div>
             <div class="flex items-center gap-3">
-              <span id="memoryChannelTag" class="text-emerald-300 font-bold bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-500/40">CH-01</span>
-              <span id="stepDisplay" class="text-emerald-400/80">STEP 12.5k</span>
-              <span id="squelchStateTag" class="text-emerald-500 font-bold">SQL: CLOSED</span>
+              <span id="lcdMem" class="font-bold lcd-chip px-1.5 py-0.5 rounded">MEM</span>
+              <span id="lcdRx" class="lcd-dim truncate max-w-[12rem]">RX —</span>
             </div>
           </div>
 
-          <!-- Main Large Frequency Display & S-Meter Grid -->
-          <div class="relative z-10 grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
-            
-            <!-- Frequency Digits -->
-            <div class="md:col-span-8 flex flex-col justify-center">
-              <div class="text-[10px] sm:text-xs font-mono tracking-widest text-emerald-300/70 mb-0.5">VFO-A RX FREQUENCY</div>
-              <div class="flex items-baseline font-lcd text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-white drop-shadow-[0_0_12px_rgba(16,185,129,0.5)]">
-                <span id="freqMain" class="transition-all">146.880</span>
-                <span id="freqSub" class="text-2xl sm:text-3xl md:text-4xl text-emerald-400/90 ml-1">.00</span>
-                <span class="text-sm sm:text-base font-radio text-emerald-400/70 ml-2">MHz</span>
-              </div>
-              <div id="channelNameDisplay" class="text-sm sm:text-base font-semibold text-emerald-200 mt-1 truncate">
-                Palomar Repeater • San Diego, CA
-              </div>
-              <div id="channelSubDetails" class="text-xs text-emerald-400/80 font-mono mt-0.5 truncate">
-                Callsign: W6NWG • Output: 146.880 • CTCSS: 107.2 Hz
-              </div>
+          <div class="relative z-10">
+            <div class="text-[10px] sm:text-xs font-mono tracking-widest lcd-dim mb-0.5">RX FREQUENCY</div>
+            <div class="flex items-baseline font-lcd font-bold tracking-tight lcd-bright">
+              <span id="freqMain" class="text-4xl sm:text-5xl md:text-6xl">145.500</span>
+              <span id="freqSub" class="text-2xl sm:text-3xl md:text-4xl lcd-dim ml-0.5">00</span>
+              <span class="text-sm sm:text-base font-radio lcd-dim ml-2">MHz</span>
             </div>
-
-            <!-- Signal Strength S-Meter & Spectrum Visualizer -->
-            <div class="md:col-span-4 flex flex-col gap-2 bg-black/40 p-2.5 rounded-lg border border-emerald-500/20">
-              <!-- S-Meter -->
-              <div>
-                <div class="flex justify-between text-[10px] font-lcd text-emerald-400/80 mb-1">
-                  <span>S1 3 5 7 9</span>
-                  <span class="text-red-400">+20 +40 +60dB</span>
-                </div>
-                <!-- Bar Meter -->
-                <div class="w-full bg-slate-900 h-3 rounded-sm overflow-hidden flex p-0.5 gap-0.5 border border-emerald-950">
-                  <div id="sMeterBars" class="flex-1 flex gap-0.5 h-full">
-                    <!-- S-Meter dynamic bars populated via JS -->
-                  </div>
-                </div>
-              </div>
-
-              <!-- Real-time Audio Spectrum Mini-Canvas -->
-              <div>
-                <div class="flex justify-between text-[9px] font-mono text-emerald-400/60 mb-0.5">
-                  <span>RF SPECTRUM / AUDIO SCOPE</span>
-                  <span id="bitrateInfo">LIVE</span>
-                </div>
-                <div class="w-full h-14 bg-black/70 rounded overflow-hidden relative border border-emerald-500/30">
-                  <canvas id="scopeCanvas" class="w-full h-full block"></canvas>
-                  <div id="noSignalPlaceholder" class="absolute inset-0 flex items-center justify-center text-[10px] font-lcd text-emerald-500/40">
-                    NO CARRIER
-                  </div>
-                </div>
-              </div>
-            </div>
-
+            <div id="lcdTitle" class="text-sm sm:text-base font-semibold lcd-bright mt-1 truncate">FM calling channel</div>
+            <div id="lcdDetail" class="text-xs lcd-dim font-mono mt-0.5 truncate">&nbsp;</div>
           </div>
 
-          <!-- Bottom LCD Status Bar -->
-          <div class="relative z-10 mt-3 pt-2 border-t border-emerald-500/20 flex flex-wrap items-center justify-between text-[11px] font-mono text-emerald-400/70">
-            <div class="flex items-center gap-2">
-              <span id="streamStatusBadge" class="flex items-center gap-1.5 text-emerald-300">
-                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span id="streamStatusText">Ready to Listen</span>
-              </span>
-              <span>•</span>
-              <span id="activeSourceType">Broadcastify Feed</span>
-            </div>
-            <div class="flex items-center gap-3">
-              <span id="rogerBeepStatus" class="text-emerald-400">ROGER: ON</span>
-              <span id="attStatus">ATT: 0dB</span>
-              <span id="toneBurst">1750Hz: OFF</span>
+          <!-- Band strip: UK band plan with the tuned frequency and nearby repeater outputs -->
+          <div class="relative z-10 mt-4">
+            <div id="bandStrip" class="relative h-7 rounded overflow-hidden flex border lcd-line"></div>
+            <div id="bandTicks" class="relative h-2"></div>
+            <div class="flex justify-between text-[10px] font-lcd lcd-dim">
+              <span>144.0</span><span>144.5</span><span>145.0</span><span>145.5</span><span>146.0</span>
             </div>
           </div>
         </div>
 
-        <!-- Front Panel Hardware Controls -->
+        <!-- Front panel -->
         <div class="mt-6 grid grid-cols-1 sm:grid-cols-12 gap-5 items-center">
-          
-          <!-- Keypad & Function Toggles -->
           <div class="sm:col-span-7 flex flex-col gap-3">
-            <!-- Row 1: Rig Mode Buttons -->
-            <div class="grid grid-cols-4 gap-2">
-              <button id="btnPlayStream" class="py-2.5 px-2 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-radio font-bold text-xs rounded-lg shadow-md transition flex flex-col items-center justify-center gap-1">
-                <svg id="playIcon" class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path>
-                </svg>
-                <span id="playBtnLabel">RECEIVE</span>
+            <div class="grid grid-cols-3 gap-2">
+              <button id="btnPower" class="py-2.5 px-2 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-radio font-bold text-xs rounded-lg shadow-md transition flex flex-col items-center justify-center gap-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.636 5.636a9 9 0 1012.728 0M12 3v9"></path></svg>
+                <span id="powerLabel">RECEIVE</span>
               </button>
-
-              <button id="btnScan" class="py-2.5 px-2 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 font-radio font-bold text-xs rounded-lg border border-slate-700 transition flex flex-col items-center justify-center gap-1">
-                <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                </svg>
-                <span id="scanBtnLabel">SCAN</span>
+              <button id="btnVfoMem" class="py-2.5 px-2 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 font-radio font-bold text-xs rounded-lg border border-slate-700 transition flex flex-col items-center justify-center gap-1">
+                <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path></svg>
+                <span id="vfoMemLabel">MEM</span>
               </button>
-
-              <button id="btnMon" class="py-2.5 px-2 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 font-radio font-bold text-xs rounded-lg border border-slate-700 transition flex flex-col items-center justify-center gap-1">
-                <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>
-                </svg>
-                <span id="monBtnLabel">SQL OFF</span>
-              </button>
-
-              <button id="btnPtt" class="py-2.5 px-2 bg-rose-700/80 hover:bg-rose-600 active:scale-95 text-white font-radio font-bold text-xs rounded-lg shadow-md border border-rose-500/50 transition flex flex-col items-center justify-center gap-1" title="Push-to-Talk Simulation with Roger Beep">
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clip-rule="evenodd"></path>
-                </svg>
-                <span>PTT MIC</span>
-              </button>
+              <a id="btnNewTab" href="#" target="_blank" rel="noopener" class="py-2.5 px-2 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 font-radio font-bold text-xs rounded-lg border border-slate-700 transition flex flex-col items-center justify-center gap-1">
+                <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                <span>NEW TAB</span>
+              </a>
             </div>
 
-            <!-- Row 2: Secondary Switches -->
-            <div class="grid grid-cols-4 gap-2 text-xs">
-              <button id="btnVfoMem" class="py-1.5 px-2 rounded bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-slate-300 font-mono transition">
-                VFO / MEM
-              </button>
-              <button id="btnBandCycle" class="py-1.5 px-2 rounded bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-slate-300 font-mono transition">
-                BAND 2M
-              </button>
-              <button id="btnStepToggle" class="py-1.5 px-2 rounded bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-slate-300 font-mono transition">
-                STEP: 12.5k
-              </button>
-              <button id="btnRogerToggle" class="py-1.5 px-2 rounded bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-slate-300 font-mono transition">
-                BEEP: ON
-              </button>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <button id="btnStep" class="py-1.5 px-2 rounded bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-slate-300 font-mono transition">STEP: 12.5k</button>
+              <button id="btnMode" class="py-1.5 px-2 rounded bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-slate-300 font-mono transition">MODE: NFM</button>
             </div>
 
-            <!-- Sliders for Volume & Squelch -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-              <!-- AF Gain (Volume) -->
-              <div class="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800">
-                <div class="flex justify-between items-center text-xs font-mono mb-1 text-slate-300">
-                  <span>AF GAIN (VOL)</span>
-                  <span id="volLevelText" class="text-cyan-400">75%</span>
-                </div>
-                <input id="volSlider" type="range" min="0" max="100" value="75" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+            <div class="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800">
+              <div class="flex justify-between items-center text-xs font-mono mb-1 text-slate-300">
+                <span>SQUELCH (SQL)</span>
+                <span id="sqlText" class="text-emerald-400">OFF</span>
               </div>
-
-              <!-- SQL (Squelch) -->
-              <div class="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800">
-                <div class="flex justify-between items-center text-xs font-mono mb-1 text-slate-300">
-                  <span>SQUELCH (SQL)</span>
-                  <span id="sqlLevelText" class="text-emerald-400">S-3</span>
-                </div>
-                <input id="sqlSlider" type="range" min="0" max="10" value="3" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer">
-              </div>
+              <input id="sqlSlider" type="range" min="0" max="10" value="0" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer" aria-label="Squelch">
+              <p class="text-[10px] text-slate-500 mt-1">Sent to the receiver when it tunes. Volume is on the receiver itself.</p>
             </div>
           </div>
 
-          <!-- Rotary Tuning Knob (VFO Dial) -->
           <div class="sm:col-span-5 flex flex-col items-center justify-center p-3 bg-slate-900/60 rounded-xl border border-slate-800/80">
-            <div class="text-[11px] font-mono tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
-              <span>OPTICAL DIAL • FREQ TUNE</span>
-            </div>
-            
+            <div class="text-[11px] font-mono tracking-wider text-slate-400 mb-2">TUNING</div>
             <div class="relative flex items-center justify-center">
-              <!-- Step Buttons around knob -->
-              <button id="dialTuneDown" class="absolute -left-3 z-10 w-8 h-8 rounded-full bg-slate-800 hover:bg-cyan-600 active:scale-90 text-white font-bold text-sm flex items-center justify-center border border-slate-700 shadow transition" title="Tune Down">
-                ◀
-              </button>
-
-              <!-- Central Knob -->
-              <div id="mainTuningKnob" class="rotary-knob w-28 h-28 sm:w-32 sm:h-32 rounded-full cursor-grab active:cursor-grabbing border-4 border-slate-700 relative flex items-center justify-center transition-transform shadow-2xl">
-                <!-- Outer knurled ridges -->
+              <button id="tuneDown" class="absolute -left-3 z-10 w-8 h-8 rounded-full bg-slate-800 hover:bg-cyan-600 active:scale-90 text-white font-bold text-sm flex items-center justify-center border border-slate-700 shadow transition" title="Tune down">◀</button>
+              <div id="knob" class="rotary-knob w-28 h-28 sm:w-32 sm:h-32 rounded-full cursor-grab active:cursor-grabbing border-4 border-slate-700 relative flex items-center justify-center" title="Drag or scroll to tune">
                 <div class="absolute inset-1.5 rounded-full border border-slate-600/40 pointer-events-none"></div>
-                <!-- Finger dimple indicator -->
-                <div id="knobDimple" class="absolute top-2 w-4 h-4 rounded-full bg-slate-800 border-2 border-cyan-400/80 shadow-inner"></div>
-                <!-- Center cap -->
-                <div class="w-12 h-12 rounded-full bg-slate-900/90 border border-slate-700 flex items-center justify-center text-slate-400 font-mono text-[10px]">
-                  TUNING
-                </div>
+                <div class="absolute top-2 w-4 h-4 rounded-full bg-slate-800 border-2 border-cyan-400/80 shadow-inner"></div>
+                <div class="w-12 h-12 rounded-full bg-slate-900/90 border border-slate-700 flex items-center justify-center text-slate-400 font-mono text-[10px]">TUNE</div>
               </div>
-
-              <button id="dialTuneUp" class="absolute -right-3 z-10 w-8 h-8 rounded-full bg-slate-800 hover:bg-cyan-600 active:scale-90 text-white font-bold text-sm flex items-center justify-center border border-slate-700 shadow transition" title="Tune Up">
-                ▶
-              </button>
+              <button id="tuneUp" class="absolute -right-3 z-10 w-8 h-8 rounded-full bg-slate-800 hover:bg-cyan-600 active:scale-90 text-white font-bold text-sm flex items-center justify-center border border-slate-700 shadow transition" title="Tune up">▶</button>
             </div>
-
-            <p class="text-[10px] text-slate-400 font-mono mt-2 text-center">
-              Drag knob / use arrows / scroll wheel to tune
-            </p>
-          </div>
-
-        </div>
-
-      </div>
-
-      <!-- Quick Band Information / 2m Band Plan Guide -->
-      <div class="bg-slate-900/80 rounded-xl border border-slate-800 p-4 text-xs">
-        <h2 class="font-radio font-bold text-slate-300 text-sm mb-2 flex items-center gap-2">
-          <span>2-METER (144 - 148 MHz) BAND ALLOCATION PLAN</span>
-          <span class="text-[10px] font-normal text-slate-400 font-sans">(ITU Region 2 standard)</span>
-        </h2>
-        
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] font-mono">
-          <div class="bg-slate-950/70 p-2 rounded border border-slate-800">
-            <span class="text-amber-400 block font-bold">144.00 - 144.30</span>
-            <span class="text-slate-400">CW, SSB, EME (Moonbounce)</span>
-          </div>
-          <div class="bg-slate-950/70 p-2 rounded border border-slate-800">
-            <span class="text-emerald-400 block font-bold">145.80 - 146.00</span>
-            <span class="text-slate-400">Amateur Satellite & ISS Downlink</span>
-          </div>
-          <div class="bg-slate-950/70 p-2 rounded border border-slate-800">
-            <span class="text-cyan-400 block font-bold">146.520 MHz</span>
-            <span class="text-slate-400">National FM Simplex Calling</span>
-          </div>
-          <div class="bg-slate-950/70 p-2 rounded border border-slate-800">
-            <span class="text-purple-400 block font-bold">146.61 - 147.99</span>
-            <span class="text-slate-400">FM Repeaters (±600kHz Offset)</span>
+            <p class="text-[10px] text-slate-400 font-mono mt-2 text-center">Drag, scroll, arrows or ← → keys.<br>MEM steps channels, VFO steps frequency.</p>
           </div>
         </div>
       </div>
 
+      <!-- The live receiver -->
+      <div class="bg-slate-900/80 rounded-xl border border-slate-800 overflow-hidden">
+        <div class="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5 border-b border-slate-800">
+          <div class="min-w-0">
+            <div id="rxName" class="font-radio font-bold text-sm text-white truncate">Receiver</div>
+            <div id="rxMeta" class="text-[11px] text-slate-400 font-mono truncate"></div>
+          </div>
+          <button id="btnReload" class="text-xs px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-mono transition" title="Reconnect to the receiver">RELOAD</button>
+        </div>
+        <div class="relative bg-black" style="height: min(75vh, 640px); min-height: 460px;">
+          <iframe id="rxFrame" title="Live OpenWebRX receiver" class="absolute inset-0 w-full h-full hidden" allow="autoplay; fullscreen"></iframe>
+          <div id="rxIdle" class="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center">
+            <div class="font-lcd text-emerald-500/60 text-sm tracking-widest">RECEIVER OFF</div>
+            <p class="text-xs text-slate-400 max-w-sm">Press <strong class="text-emerald-400">RECEIVE</strong> to connect to the receiver. These are run by volunteers with only a few listener slots each, so it stays disconnected until you want it.</p>
+          </div>
+        </div>
+        <div class="px-3.5 py-2 text-[11px] text-slate-400 border-t border-slate-800 leading-relaxed">
+          <strong class="text-slate-300">Tips:</strong> click inside the receiver if there's no sound. If it's showing another band (say 20m or airband), pick its <em>2m</em> profile from the receiver's menu, then choose your channel again: a shared receiver can only be on one band at a time.
+        </div>
+      </div>
     </section>
 
-    <!-- RIGHT COLUMN: 2m Source Directory & Filterable Channel Bank -->
-    <section class="lg:col-span-4 flex flex-col gap-3">
-      
-      <!-- Bank Controls & Filter -->
+    <!-- RIGHT: receivers and channels -->
+    <section class="lg:col-span-4 flex flex-col gap-3 min-w-0">
+
+      <div class="bg-slate-900/80 rounded-xl border border-slate-800 p-3.5 flex flex-col gap-2">
+        <h2 class="font-radio font-bold text-sm text-white">RECEIVER</h2>
+        <div id="receiverList" class="flex flex-col gap-1.5"></div>
+        <details class="text-xs mt-1">
+          <summary class="cursor-pointer text-slate-400 hover:text-slate-200 font-mono">More UK 2m receivers (open in a new tab)</summary>
+          <p class="text-[11px] text-slate-500 mt-1.5 mb-1">These only work over plain HTTP, so they can't sit inside this page. Each link opens on the frequency you've tuned.</p>
+          <div id="linkOnlyList" class="flex flex-col gap-1 mt-1"></div>
+        </details>
+      </div>
+
       <div class="bg-slate-900/80 rounded-xl border border-slate-800 p-3.5 flex flex-col gap-3">
         <div class="flex items-center justify-between">
-          <h2 class="font-radio font-bold text-sm text-white flex items-center gap-2">
-            <span>2M CHANNELS & FEEDS</span>
-            <span id="channelCountBadge" class="text-xs bg-slate-800 text-cyan-400 px-2 py-0.5 rounded-full border border-slate-700">12 Available</span>
-          </h2>
-          <span class="text-[11px] text-slate-400 font-mono">LIVE AUDIO</span>
+          <h2 class="font-radio font-bold text-sm text-white">CHANNELS</h2>
+          <span id="channelCount" class="text-xs bg-slate-800 text-cyan-400 px-2 py-0.5 rounded-full border border-slate-700"></span>
         </div>
-
-        <!-- Category Filter Pills -->
         <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs font-mono">
-          <button data-cat="all" class="category-btn active px-2.5 py-1 rounded-md bg-cyan-600 text-white font-medium transition whitespace-nowrap">
-            All Sources
-          </button>
-          <button data-cat="repeater" class="category-btn px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">
-            Repeaters
-          </button>
-          <button data-cat="network" class="category-btn px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">
-            Linked Nets
-          </button>
-          <button data-cat="space" class="category-btn px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">
-            Space & SAT
-          </button>
-          <button data-cat="news" class="category-btn px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">
-            Ham News
-          </button>
+          <button data-tab="near" class="tab-btn px-2.5 py-1 rounded-md transition whitespace-nowrap">Near receiver</button>
+          <button data-tab="band" class="tab-btn px-2.5 py-1 rounded-md transition whitespace-nowrap">Band plan</button>
+          <button data-tab="all" class="tab-btn px-2.5 py-1 rounded-md transition whitespace-nowrap">All UK</button>
         </div>
-
-        <!-- Search Input -->
-        <div class="relative">
-          <input id="channelSearch" type="text" placeholder="Search frequency, callsign, city..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition font-mono">
-          <svg class="w-4 h-4 text-slate-500 absolute right-2.5 top-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-          </svg>
+        <div class="flex items-center gap-2">
+          <input id="channelSearch" type="search" placeholder="Callsign, town or frequency" class="flex-1 min-w-0 bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition font-mono">
+          <label class="flex items-center gap-1.5 text-[11px] text-slate-400 font-mono whitespace-nowrap" title="Digital-only repeaters (DMR, D-STAR, Fusion) can't be heard as plain FM">
+            <input id="analogueOnly" type="checkbox" checked class="accent-cyan-500"> FM only
+          </label>
         </div>
       </div>
 
-      <!-- Channel List Container -->
-      <div id="channelList" class="flex-1 overflow-y-auto max-h-[580px] flex flex-col gap-2 pr-1">
-        <!-- Rendered via JS -->
-      </div>
+      <div id="channelList" class="flex-1 overflow-y-auto max-h-[640px] flex flex-col gap-2 pr-1"></div>
 
-      <!-- Live WebSDR External Gateway Quick Card -->
-      <div class="bg-gradient-to-r from-slate-900 to-slate-850 p-3 rounded-xl border border-slate-800 text-xs flex items-center justify-between">
-        <div>
-          <div class="font-bold text-slate-200">Want to tune raw 2M SDR?</div>
-          <div class="text-[11px] text-slate-400">Connect to open WebSDR servers with 144MHz antennas</div>
-        </div>
-        <a href="http://www.websdr.org/" target="_blank" rel="noopener noreferrer" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-slate-700 font-mono text-[11px] transition flex items-center gap-1">
-          <span>WebSDR</span>
-          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
-          </svg>
-        </a>
-      </div>
-
+      <p class="text-[11px] text-slate-500 leading-relaxed">
+        Repeater list: <a class="text-cyan-500 hover:underline" href="https://ukrepeater.net/" target="_blank" rel="noopener">ukrepeater.net</a> (RSGB ETCC), fetched <span id="rptDate"></span>.
+        Receivers found via <a class="text-cyan-500 hover:underline" href="https://www.receiverbook.de/map" target="_blank" rel="noopener">ReceiverBook</a>, with thanks to their operators.
+      </p>
     </section>
-
   </main>
 
-  <!-- MODAL: Add Custom 2M Stream -->
-  <div id="customStreamModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-5 shadow-2xl relative">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
-        <h3 class="font-radio font-bold text-base text-white flex items-center gap-2">
-          <span>ADD 2M STREAM / REPEATER FEED</span>
-        </h3>
-        <button id="btnCloseCustomModal" class="text-slate-400 hover:text-white p-1 rounded-lg">
-          ✕
-        </button>
-      </div>
-
-      <form id="customStreamForm" class="flex flex-col gap-3 text-xs">
-        <div>
-          <label class="block text-slate-300 font-mono mb-1">Repeater / Channel Name *</label>
-          <input id="inputName" type="text" required placeholder="e.g. Mt. Diablo 2M Repeater" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-cyan-500 font-mono">
-        </div>
-
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-slate-300 font-mono mb-1">Frequency (MHz) *</label>
-            <input id="inputFreq" type="number" step="0.005" min="144" max="148" value="146.520" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-cyan-500 font-mono">
-          </div>
-          <div>
-            <label class="block text-slate-300 font-mono mb-1">Callsign / Tone</label>
-            <input id="inputCallsign" type="text" placeholder="e.g. W6CX (PL 100.0)" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-cyan-500 font-mono">
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-slate-300 font-mono mb-1">Stream Audio URL (MP3 / Icecast / M3U) *</label>
-          <input id="inputUrl" type="url" required placeholder="https://icecast.example.com/stream.mp3" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-cyan-500 font-mono">
-          <p class="text-[10px] text-slate-400 mt-1">Accepts any direct audio stream (HTTPS recommended to prevent browser mixed-content block).</p>
-        </div>
-
-        <div>
-          <label class="block text-slate-300 font-mono mb-1">Category</label>
-          <select id="inputCategory" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:border-cyan-500 font-mono">
-            <option value="repeater">VHF FM Repeater</option>
-            <option value="network">Linked Network / Reflector</option>
-            <option value="space">Satellite / ISS Downlink</option>
-            <option value="news">News / Net Dispatch</option>
-          </select>
-        </div>
-
-        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-800 mt-2">
-          <button type="button" id="btnCancelCustomModal" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono transition">Cancel</button>
-          <button type="submit" class="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-mono font-bold transition">Add Station</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- MODAL: Technical Info & 2m Band Guide -->
+  <!-- How this works -->
   <div id="infoModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-5 shadow-2xl relative max-h-[85vh] overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-5 shadow-2xl max-h-[85vh] overflow-y-auto">
       <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
-        <h3 class="font-radio font-bold text-base text-white flex items-center gap-2">
-          <span>ABOUT 2-METER AMATEUR BAND SOURCES</span>
-        </h3>
-        <button id="btnCloseInfoModal" class="text-slate-400 hover:text-white p-1 rounded-lg">✕</button>
+        <h3 class="font-radio font-bold text-base text-white">HOW THIS WORKS</h3>
+        <button data-close class="text-slate-400 hover:text-white p-1 rounded-lg">✕</button>
       </div>
-
-      <div class="text-xs text-slate-300 space-y-3 font-sans leading-relaxed">
-        <p>
-          The <strong class="text-cyan-400">2-meter band (144.000 to 148.000 MHz)</strong> is the most popular VHF amateur radio spectrum in the world. It provides reliable local line-of-sight communications, repeater linking, amateur satellite relays, and severe weather SKYWARN networks.
-        </p>
-
-        <h4 class="font-bold text-slate-100 font-radio pt-1">How Internet Streaming of 2M Works</h4>
-        <ul class="list-disc pl-5 space-y-1 text-slate-300">
-          <li><strong>Repeater Gateways & Icecast:</strong> Radio clubs wire their repeater base stations to dedicated sound cards and stream live audio via Icecast or Broadcastify servers.</li>
-          <li><strong>WebSDR / OpenWebRX:</strong> Software-Defined Radios attached to VHF antennas stream wideband IQ audio spectrum directly across the internet.</li>
-          <li><strong>EchoLink & IRLP:</strong> VoIP systems enabling hams to cross-connect repeaters across continents.</li>
-          <li><strong>ISS VHF Crossband (145.800 MHz):</strong> Downlink signals from astronauts and crossband voice repeaters on the International Space Station.</li>
+      <div class="text-xs text-slate-300 space-y-3 leading-relaxed">
+        <p>This page doesn't receive anything itself. It tunes a real receiver somewhere in the UK: an <strong class="text-cyan-400">OpenWebRX</strong> software-defined radio run by a radio amateur, with an antenna on the 2 metre band. What you hear is live.</p>
+        <p>Picking a channel or turning the knob reloads the receiver on that frequency. The receiver's own panel shows the waterfall and has the volume control.</p>
+        <h4 class="font-bold text-slate-100 font-radio pt-1">UK 2m band plan (simplified)</h4>
+        <ul class="list-disc pl-5 space-y-1">
+          <li><strong>144.000–144.150</strong> CW and moonbounce</li>
+          <li><strong>144.150–144.400</strong> SSB (144.300 is the centre of activity; FT8 on 144.174)</li>
+          <li><strong>144.400–144.490</strong> beacons</li>
+          <li><strong>144.800</strong> APRS packet</li>
+          <li><strong>144.975–145.1875</strong> repeater inputs (you'll hear little here)</li>
+          <li><strong>145.200–145.5875</strong> FM simplex, with <strong>145.500</strong> as the calling channel</li>
+          <li><strong>145.575–145.7875</strong> repeater outputs</li>
+          <li><strong>145.800–146.000</strong> satellites, including the ISS on 145.800</li>
         </ul>
-
-        <h4 class="font-bold text-slate-100 font-radio pt-1">Transceiver Audio Engine</h4>
-        <p>
-          This app combines real live streams with an authentic FM discriminator noise generator. When squelch is open or when tuning between stations, realistic atmospheric RF noise is simulated using the Web Audio API. Pressing the <strong>PTT MIC</strong> simulates keying up with a classic Motorola/NASA Quindar roger beep!
-        </p>
-
+        <p>Repeaters listen 600 kHz below where they transmit. Most analogue ones need a CTCSS tone to open them, but you don't need it to listen.</p>
+        <p>Receivers are shared: if someone else has one on a different band, you'll see that band until someone switches it back to 2m. Please don't hog a receiver's slots.</p>
         <div class="pt-3 border-t border-slate-800 flex justify-end">
-          <button id="btnDismissInfoModal" class="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-mono font-bold transition">Got It</button>
+          <button data-close class="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-mono font-bold transition">Got it</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Audio Element for Stream Playback -->
-  <audio id="hamAudioPlayer" preload="none" crossorigin="anonymous"></audio>
-
+  <script src="repeaters.js"></script>
   <script>
-    /**
-     * 2-METER AMATEUR RADIO RECEIVER CORE APPLICATION
-     * Provides aggregated 2m sources, audio streaming, Web Audio squelch/hiss,
-     * rotary dial tuning, and spectrum visualization.
-     */
-
-    // --- STREAM DIRECTORY DATABASE ---
-    const INITIAL_CHANNELS = [
-      {
-        id: "palomar-146880",
-        name: "Palomar Amateur Radio Club Repeater",
-        callsign: "W6NWG",
-        frequency: 146.880,
-        offset: "-600 kHz",
-        tone: "107.2 Hz",
-        mode: "FM 25k",
-        location: "San Diego, CA (Palomar Mtn)",
-        category: "repeater",
-        notes: "Major Southern California linked coverage with active nets and traffic.",
-        // Live amateur radio stream / newsline relay
-        streamUrl: "https://relay.broadcastify.com/palomar_ham_146880", 
-        fallbackBackupUrl: "https://stream.wnyc.org/wnycfm-web", // resilient fallback stream
-        isSimulatedNet: false,
-        signalLevel: 8.5
-      },
-      {
-        id: "warn-146880",
-        name: "WARN SKYWARN Weather Net Repeater",
-        callsign: "WB8CRS",
-        frequency: 146.880,
-        offset: "-600 kHz",
-        tone: "110.9 Hz",
-        mode: "FM 25k",
-        location: "Cincinnati, OH",
-        category: "repeater",
-        notes: "Primary host of Weather Amateur Radio Network (WARN) severe storm nets.",
-        streamUrl: "https://icecast.warn.org/live",
-        isSimulatedNet: false,
-        signalLevel: 9.0
-      },
-      {
-        id: "top-145350",
-        name: "Tower of Power 2M Repeater",
-        callsign: "W4TOP",
-        frequency: 145.350,
-        offset: "-600 kHz",
-        tone: "82.5 Hz",
-        mode: "FM 25k",
-        location: "Dallas / Charlotte, NC",
-        category: "repeater",
-        notes: "High-power regional wide-area VHF repeater on Spencer Mountain.",
-        streamUrl: "https://broadcastify.cdnstream1.com/43107",
-        signalLevel: 8.0
-      },
-      {
-        id: "rowan-145410",
-        name: "Rowan Amateur Radio Society Repeater",
-        callsign: "N4UH",
-        frequency: 145.410,
-        offset: "-600 kHz",
-        tone: "136.5 Hz",
-        mode: "FM 25k",
-        location: "Salisbury, NC",
-        category: "repeater",
-        notes: "Active Piedmont NC club repeater with weekly emergency preparedness nets.",
-        streamUrl: "https://broadcastify.cdnstream1.com/26792",
-        signalLevel: 7.5
-      },
-      {
-        id: "simplex-146520",
-        name: "National FM Simplex Calling Channel",
-        callsign: "CQ 2M SIMPLEX",
-        frequency: 146.520,
-        offset: "SIMPLEX",
-        tone: "CSQ (None)",
-        mode: "FM 25k",
-        location: "North America Wide",
-        category: "network",
-        notes: "The universally monitored calling frequency for direct station-to-station contact.",
-        streamUrl: "https://relay.broadcastify.com/national_simplex_14652",
-        signalLevel: 9.2
-      },
-      {
-        id: "iss-145800",
-        name: "International Space Station (ISS) Downlink",
-        callsign: "NA1SS / RS0ISS",
-        frequency: 145.800,
-        offset: "SIMPLEX",
-        tone: "67.0 Hz (Voice)",
-        mode: "N-FM",
-        location: "Low Earth Orbit (400km)",
-        category: "space",
-        notes: "Amateur Radio on ISS (ARISS) voice contacts, SSTV transmissions & crossband repeater.",
-        streamUrl: "https://amsat.org/audio/iss_downlink",
-        signalLevel: 6.5
-      },
-      {
-        id: "hubnet-uk",
-        name: "HUBNet UK National AllStar / 2M Repeater",
-        callsign: "MB7IHU",
-        frequency: 145.287,
-        offset: "-600 kHz",
-        tone: "94.8 Hz",
-        mode: "FM 12.5k",
-        location: "United Kingdom (Nationwide Interlink)",
-        category: "network",
-        notes: "Massive interconnected network connecting repeaters throughout England, Wales & Scotland.",
-        streamUrl: "https://stream.hubnetwork.uk:8000/hubnet",
-        signalLevel: 8.8
-      },
-      {
-        id: "arnewsline-bulletin",
-        name: "Amateur Radio Newsline Weekly Broadcast",
-        callsign: "ARNEWSLINE",
-        frequency: 144.250,
-        offset: "SIMPLEX",
-        tone: "CSQ",
-        mode: "FM / SSB",
-        location: "Global Broadcast Net",
-        category: "news",
-        notes: "Weekly independent audio news bulletin dedicated to the world of amateur radio.",
-        streamUrl: "https://www.arnewsline.org/s/Report2410.mp3",
-        signalLevel: 9.5
-      },
-      {
-        id: "winsystem-linked",
-        name: "WIN System (Western Intertie Network)",
-        callsign: "WIN-SYS",
-        frequency: 147.240,
-        offset: "+600 kHz",
-        tone: "107.2 Hz",
-        mode: "FM 25k",
-        location: "Multi-State Intertie (CA, NV, AZ)",
-        category: "network",
-        notes: "Famous linked network of over 100 VHF/UHF repeaters spanning the Western US and overseas.",
-        streamUrl: "https://relay.broadcastify.com/winsystem_live",
-        signalLevel: 9.1
-      },
-      {
-        id: "gb3da-danbury",
-        name: "GB3DA 2M Repeater (Essex Ham)",
-        callsign: "GB3DA",
-        frequency: 145.725,
-        offset: "-600 kHz",
-        tone: "110.9 Hz",
-        mode: "FM 12.5k",
-        location: "Danbury, Essex, UK",
-        category: "repeater",
-        notes: "Historic UK 2m repeater operated by Danbury Repeater Group with Monday Night Net.",
-        streamUrl: "https://stream.essexham.co.uk/gb3da",
-        signalLevel: 7.8
-      },
-      {
-        id: "sat-ao91",
-        name: "Fox-1B (AO-91) FM Transponder",
-        callsign: "AMSAT AO-91",
-        frequency: 145.960,
-        offset: "SPLIT 435U",
-        tone: "67.0 Hz",
-        mode: "FM Voice",
-        location: "Polar Orbit LEO",
-        category: "space",
-        notes: "VHF Downlink for amateur voice satellite contacts with handheld yagi antennas.",
-        streamUrl: "https://amsat.org/audio/ao91",
-        signalLevel: 6.0
-      },
-      {
-        id: "noaa-vhf-wx",
-        name: "VHF All-Hazards Weather Gateway",
-        callsign: "KEC63",
-        frequency: 162.550,
-        offset: "WX-01",
-        tone: "1050 Hz",
-        mode: "FM WX",
-        location: "NOAA Marine & Local VHF",
-        category: "news",
-        notes: "24/7 continuous VHF weather broadcasts, alerts, and atmospheric reports.",
-        streamUrl: "https://icecast.noaa.gov/stream/kec63.mp3",
-        signalLevel: 9.8
-      }
+    // --- RECEIVERS -----------------------------------------------------------
+    // Embeddable: HTTPS and no X-Frame-Options. Checked 2026-09-26.
+    const RECEIVERS = [
+      { id: "nkpa", name: "BRFM", place: "Minster-on-Sea, Kent", url: "https://radio2.nkpa.co.uk/", lat: 51.424, lon: 0.831, slots: 5, note: "Wide 140–150 MHz view" },
+      { id: "ambientscape", name: "Ambientscape", place: "Harrow, London", url: "https://ambientscapewebsdr.uk/", lat: 51.586, lon: -0.354, slots: 13, note: "Multi-band; may need its 2M profile" },
+      { id: "radarc", name: "RADARC", place: "Binfield, Berkshire", url: "https://sdr.radarc.org/", lat: 51.443, lon: -0.766, slots: 9, note: "Reading & District ARC" },
+      { id: "owrx-york", name: "owrx.uk VHF 01", place: "York", url: "https://vhf1.owrx.uk/", lat: 54.103, lon: -1.303, slots: 1, note: "Only one listener at a time" }
     ];
 
-    // App State
-    let channels = [...INITIAL_CHANNELS];
-    let activeChannelIndex = 0;
-    let isPlaying = false;
-    let isScanning = false;
-    let scanInterval = null;
-    let squelchOpen = false;
-    let squelchThreshold = 3; // 0 to 10 scale
-    let currentVolume = 0.75;
-    let currentStepKHz = 12.5; // tuning step
-    let rogerBeepEnabled = true;
-    let currentCategoryFilter = "all";
-    let isVfoMode = false; // VFO vs MEM
-    let currentVfoFreq = 146.880;
+    // Plain HTTP, so link-only.
+    const LINK_ONLY_RECEIVERS = [
+      { name: "G0XBU", place: "Jodrell Bank, Cheshire", url: "http://g0xbuwebsdr.ddns.net:8073/" },
+      { name: "Sounds of ATC", place: "Chester", url: "http://openwebrx.soundsofatc.com/" },
+      { name: "2E0DGP", place: "Chorley, Lancashire", url: "http://sdr.ladar.club:8073/" },
+      { name: "M0VOB", place: "Bradford", url: "http://sdr.ukvpn.cloud:91/" },
+      { name: "M0YRK", place: "Yorkshire", url: "http://62.3.72.78:9001/" },
+      { name: "M0GUC", place: "Kingswinford, West Midlands", url: "http://185.138.197.168:8073/" },
+      { name: "M8YRT", place: "Tenbury Wells, Worcestershire", url: "http://wr15.duckdns.org:8072/" },
+      { name: "Bedford OpenWebRX+", place: "Bedford", url: "http://remoteradio.changeip.org:8077/" },
+      { name: "GB0SNB", place: "Kelvedon Hatch Bunker, Essex", url: "http://vhfsdr.gb0snb.com:8074/" },
+      { name: "G1WOR", place: "Worthing, West Sussex", url: "http://81.143.239.74:8073/" },
+      { name: "M0KVH", place: "Shedfield, Hampshire", url: "http://m0kvh.ddns.net:8073/" },
+      { name: "WessexWX", place: "Wimborne, Dorset", url: "http://weathergeek.synology.me:8073/" }
+    ];
 
-    // Web Audio API Components
-    let audioCtx = null;
-    let audioSourceNode = null;
-    let gainNode = null;
-    let noiseGainNode = null;
-    let noiseNode = null;
-    let analyserNode = null;
-    let animationFrameId = null;
+    // --- BAND PLAN -----------------------------------------------------------
+    const BAND_MIN = 144000000, BAND_MAX = 146000000;
 
-    // DOM Elements Cache
-    const audioElement = document.getElementById("hamAudioPlayer");
-    const freqMain = document.getElementById("freqMain");
-    const freqSub = document.getElementById("freqSub");
-    const channelNameDisplay = document.getElementById("channelNameDisplay");
-    const channelSubDetails = document.getElementById("channelSubDetails");
-    const memoryChannelTag = document.getElementById("memoryChannelTag");
-    const displayMode = document.getElementById("displayMode");
-    const displayOffset = document.getElementById("displayOffset");
-    const displayTone = document.getElementById("displayTone");
-    const stepDisplay = document.getElementById("stepDisplay");
-    const squelchStateTag = document.getElementById("squelchStateTag");
-    const streamStatusBadge = document.getElementById("streamStatusBadge");
-    const streamStatusText = document.getElementById("streamStatusText");
-    const activeSourceType = document.getElementById("activeSourceType");
-    const sMeterBars = document.getElementById("sMeterBars");
-    const scopeCanvas = document.getElementById("scopeCanvas");
-    const noSignalPlaceholder = document.getElementById("noSignalPlaceholder");
-    const channelList = document.getElementById("channelList");
-    const channelSearch = document.getElementById("channelSearch");
-    const channelCountBadge = document.getElementById("channelCountBadge");
-    const volSlider = document.getElementById("volSlider");
-    const volLevelText = document.getElementById("volLevelText");
-    const sqlSlider = document.getElementById("sqlSlider");
-    const sqlLevelText = document.getElementById("sqlLevelText");
-    const btnPlayStream = document.getElementById("btnPlayStream");
-    const playBtnLabel = document.getElementById("playBtnLabel");
-    const playIcon = document.getElementById("playIcon");
-    const btnScan = document.getElementById("btnScan");
-    const scanBtnLabel = document.getElementById("scanBtnLabel");
-    const btnMon = document.getElementById("btnMon");
-    const monBtnLabel = document.getElementById("monBtnLabel");
-    const btnPtt = document.getElementById("btnPtt");
-    const btnVfoMem = document.getElementById("btnVfoMem");
-    const btnBandCycle = document.getElementById("btnBandCycle");
-    const btnStepToggle = document.getElementById("btnStepToggle");
-    const btnRogerToggle = document.getElementById("btnRogerToggle");
-    const rogerBeepStatus = document.getElementById("rogerBeepStatus");
-    const rxLed = document.getElementById("rxLed");
-    const rxLabel = document.getElementById("rxLabel");
-    const mainTuningKnob = document.getElementById("mainTuningKnob");
-    const knobDimple = document.getElementById("knobDimple");
-    const dialTuneDown = document.getElementById("dialTuneDown");
-    const dialTuneUp = document.getElementById("dialTuneUp");
+    const BAND_SEGMENTS = [
+      { from: 144.000, to: 144.150, label: "CW", color: "#f59e0b" },
+      { from: 144.150, to: 144.400, label: "SSB", color: "#fb923c" },
+      { from: 144.400, to: 144.490, label: "", color: "#a3a3a3" },
+      { from: 144.490, to: 144.975, label: "DIGI", color: "#818cf8" },
+      { from: 144.975, to: 145.200, label: "RPT IN", color: "#64748b" },
+      { from: 145.200, to: 145.5935, label: "FM SIMPLEX", color: "#22d3ee" },
+      { from: 145.5935, to: 145.800, label: "RPT OUT", color: "#c084fc" },
+      { from: 145.800, to: 146.000, label: "SAT", color: "#34d399" }
+    ];
 
-    // Initialize Web Audio graph
-    function initAudioContext() {
-      if (audioCtx) return;
-      
-      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      audioCtx = new AudioContextClass();
+    const BAND_CHANNELS = [
+      { mhz: 144.174, mode: "usb", title: "FT8", sub: "Weak-signal digital (you'll hear warbling tones)" },
+      { mhz: 144.300, mode: "usb", title: "SSB centre of activity", sub: "Long-distance voice, busiest during contests and lifts" },
+      { mhz: 144.800, mode: "nfm", title: "APRS", sub: "Packet position reports (data bursts)" },
+      { mhz: 145.500, mode: "nfm", title: "FM calling channel", sub: "Call CQ here, then move to a simplex channel" },
+      { mhz: 145.800, mode: "nfm", title: "ISS voice downlink", sub: "Crew contacts and SSTV events, only during passes" },
+      { mhz: 145.825, mode: "nfm", title: "ISS / satellite APRS", sub: "Digipeater packets during passes" }
+    ].map(c => ({
+      key: "band:" + c.mhz,
+      hz: Math.round(c.mhz * 1e6),
+      mode: c.mode,
+      title: c.title,
+      sub: c.sub,
+      tag: "BAND"
+    }));
 
-      // Master Gain Node for volume control
-      gainNode = audioCtx.createGain();
-      gainNode.gain.setValueAtTime(currentVolume, audioCtx.currentTime);
+    const MODE_NAMES = { A: "FM", D: "D-STAR", M: "DMR", F: "Fusion", N: "NXDN" };
 
-      // Fast Fourier Analyser for spectrum visualization
-      analyserNode = audioCtx.createAnalyser();
-      analyserNode.fftSize = 64;
-      analyserNode.smoothingTimeConstant = 0.8;
+    const REPEATER_CHANNELS = REPEATERS.map(([call, out, inp, tone, town, region, lat, lon, modes, channel]) => {
+      const modeList = [...new Set(modes.split("").map(m => MODE_NAMES[m]).filter(Boolean))];
+      const analogue = modes.includes("A");
+      return {
+        key: "rpt:" + call,
+        hz: Math.round(out * 1e6),
+        mode: "nfm",
+        title: `${call} · ${town}`,
+        call, town, lat, lon, analogue,
+        sub: [
+          modeList.join("/") || modes,
+          analogue && tone ? `CTCSS ${tone}` : (!analogue && tone ? `CC ${tone}` : ""),
+          `input ${inp.toFixed(4).replace(/0+$/, "").replace(/\.$/, "")}`,
+          channel
+        ].filter(Boolean).join(" · "),
+        tag: "RPT"
+      };
+    });
 
-      // FM Discriminator Noise Generator (Filtered Pink/White Noise)
-      const bufferSize = 2 * audioCtx.sampleRate;
-      const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-      const output = noiseBuffer.getChannelData(0);
-      let b0 = 0, b1 = 0, b2 = 0;
-      for (let i = 0; i < bufferSize; i++) {
-        const white = Math.random() * 2 - 1;
-        // Pink noise approximation for realistic RF discriminator rush
-        b0 = 0.99886 * b0 + white * 0.0555179;
-        b1 = 0.99332 * b1 + white * 0.0750759;
-        b2 = 0.96900 * b2 + white * 0.1538520;
-        output[i] = (b0 + b1 + b2 + white * 0.5362) * 0.08;
-      }
+    // --- STATE ---------------------------------------------------------------
+    const STEPS = [6.25, 12.5, 25];
+    const MODES = ["nfm", "am", "usb", "lsb"];
+    const SQL_DB = [null, -110, -105, -100, -95, -90, -85, -80, -75, -70, -65];
 
-      noiseNode = audioCtx.createBufferSource();
-      noiseNode.buffer = noiseBuffer;
-      noiseNode.loop = true;
+    const state = {
+      rxId: "nkpa",
+      hz: 145500000,
+      mode: "nfm",
+      memKey: "band:145.5",
+      vfo: false,
+      stepIdx: 1,
+      sqlIdx: 0,
+      tab: "near",
+      theme: "green",
+      on: false
+    };
 
-      // Bandpass filter to shape the noise like a 2.5kHz FM receiver audio passband
-      const noiseFilter = audioCtx.createBiquadFilter();
-      noiseFilter.type = "bandpass";
-      noiseFilter.frequency.value = 1400; // mid vocal frequency
-      noiseFilter.Q.value = 0.7;
-
-      noiseGainNode = audioCtx.createGain();
-      noiseGainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-
-      noiseNode.connect(noiseFilter);
-      noiseFilter.connect(noiseGainNode);
-      noiseGainNode.connect(gainNode);
-      noiseNode.start();
-
-      // Stream media element connection
+    function loadSaved() {
       try {
-        audioSourceNode = audioCtx.createMediaElementSource(audioElement);
-        audioSourceNode.connect(gainNode);
-      } catch (err) {
-        console.warn("Audio source attachment notice:", err);
-      }
-
-      gainNode.connect(analyserNode);
-      analyserNode.connect(audioCtx.destination);
-
-      startVisualizer();
+        const saved = JSON.parse(localStorage.getItem("vhf2m") || "{}");
+        for (const k of ["rxId", "hz", "mode", "memKey", "vfo", "stepIdx", "sqlIdx", "tab", "theme"]) {
+          if (k in saved) state[k] = saved[k];
+        }
+      } catch (e) { /* storage unavailable: use defaults */ }
+      if (!RECEIVERS.some(r => r.id === state.rxId)) state.rxId = RECEIVERS[0].id;
+      state.hz = clampHz(state.hz);
     }
 
-    // Play classic Ham Roger Beep (e.g. 1750 Hz burst or dual-tone NASA Quindar)
-    function playRogerBeep() {
-      if (!rogerBeepEnabled || !audioCtx) return;
+    function save() {
       try {
-        const now = audioCtx.currentTime;
-        const osc = audioCtx.createOscillator();
-        const beepGain = audioCtx.createGain();
-        
-        // Classic Motorola / Yaesu 1800 Hz beep
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(1850, now);
-        
-        beepGain.gain.setValueAtTime(0.2, now);
-        beepGain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+        const { on, ...rest } = state;
+        localStorage.setItem("vhf2m", JSON.stringify(rest));
+      } catch (e) { /* ignore */ }
+    }
 
-        osc.connect(beepGain);
-        beepGain.connect(gainNode);
+    // --- HELPERS -------------------------------------------------------------
+    const $ = id => document.getElementById(id);
 
-        osc.start(now);
-        osc.stop(now + 0.15);
-      } catch (e) {
-        console.error("Roger beep error", e);
+    function clampHz(hz) {
+      return Math.min(BAND_MAX, Math.max(BAND_MIN, Math.round(hz)));
+    }
+
+    function receiver() {
+      return RECEIVERS.find(r => r.id === state.rxId);
+    }
+
+    function distanceKm(lat1, lon1, lat2, lon2) {
+      const rad = Math.PI / 180;
+      const dLat = (lat2 - lat1) * rad, dLon = (lon2 - lon1) * rad;
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLon / 2) ** 2;
+      return 6371 * 2 * Math.asin(Math.sqrt(a));
+    }
+
+    function fmtMHz(hz) {
+      return (hz / 1e6).toFixed(4).replace(/0$/, "");
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+
+    function tunedUrl(baseUrl) {
+      const params = [`freq=${state.hz}`, `mod=${state.mode}`];
+      if (SQL_DB[state.sqlIdx] !== null) params.push(`sql=${SQL_DB[state.sqlIdx]}`);
+      return baseUrl + "#" + params.join(",");
+    }
+
+    function findChannel(key) {
+      return BAND_CHANNELS.find(c => c.key === key) || REPEATER_CHANNELS.find(c => c.key === key);
+    }
+
+    // Repeaters sorted by distance from the chosen receiver (within 90 km)
+    function nearbyRepeaters() {
+      const rx = receiver();
+      return REPEATER_CHANNELS
+        .map(c => ({ ...c, km: distanceKm(rx.lat, rx.lon, c.lat, c.lon) }))
+        .filter(c => c.km <= 90)
+        .sort((a, b) => a.km - b.km);
+    }
+
+    // Channels the knob steps through in MEM mode: band channels plus nearby repeaters, by frequency
+    function memoryChannels() {
+      const near = nearbyRepeaters().filter(c => c.analogue);
+      return [...BAND_CHANNELS, ...near].sort((a, b) => a.hz - b.hz);
+    }
+
+    // --- RECEIVER FRAME ------------------------------------------------------
+    const frame = $("rxFrame");
+    let retuneTimer = null;
+
+    function loadFrame() {
+      if (!state.on) return;
+      // Only the #hash would change, which doesn't reload the page, so blank it first
+      frame.src = "about:blank";
+      setTimeout(() => { frame.src = tunedUrl(receiver().url); }, 50);
+    }
+
+    function scheduleRetune(delay) {
+      clearTimeout(retuneTimer);
+      retuneTimer = setTimeout(loadFrame, delay);
+    }
+
+    function setPower(on) {
+      state.on = on;
+      frame.classList.toggle("hidden", !on);
+      $("rxIdle").classList.toggle("hidden", on);
+      if (on) {
+        loadFrame();
+      } else {
+        clearTimeout(retuneTimer);
+        frame.src = "about:blank";
       }
+      const btn = $("btnPower");
+      btn.classList.toggle("bg-emerald-600", !on);
+      btn.classList.toggle("hover:bg-emerald-500", !on);
+      btn.classList.toggle("bg-amber-600", on);
+      btn.classList.toggle("hover:bg-amber-500", on);
+      $("powerLabel").textContent = on ? "DISCONNECT" : "RECEIVE";
+      $("rxLed").className = on ? "w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]" : "w-2.5 h-2.5 rounded-full bg-slate-600";
+      $("rxLabel").textContent = on ? "CONNECTED" : "STANDBY";
+      $("rxIndicator").classList.toggle("text-emerald-300", on);
+      $("rxIndicator").classList.toggle("text-slate-400", !on);
     }
 
-    // Play PTT Key-down Click
-    function playKeyClick() {
-      if (!audioCtx) return;
-      try {
-        const now = audioCtx.currentTime;
-        const osc = audioCtx.createOscillator();
-        const clickGain = audioCtx.createGain();
-        osc.type = "triangle";
-        osc.frequency.setValueAtTime(350, now);
-        osc.frequency.exponentialRampToValueAtTime(80, now + 0.04);
-        clickGain.gain.setValueAtTime(0.18, now);
-        clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
-        osc.connect(clickGain);
-        clickGain.connect(gainNode);
-        osc.start(now);
-        osc.stop(now + 0.05);
-      } catch (e) {}
+    // --- TUNING --------------------------------------------------------------
+    function selectChannel(ch) {
+      state.hz = ch.hz;
+      state.mode = ch.mode;
+      state.memKey = ch.key;
+      state.vfo = false;
+      afterTune(150);
     }
 
-    // Build S-Meter LED segments
-    function buildSMeter() {
-      sMeterBars.innerHTML = "";
-      const totalBars = 16;
-      for (let i = 0; i < totalBars; i++) {
-        const bar = document.createElement("div");
-        bar.className = "flex-1 h-full rounded-[1px] transition-colors duration-100 bg-slate-800";
-        sMeterBars.appendChild(bar);
-      }
-    }
+    function stepTune(direction) {
+      knobAngle += direction * 24;
+      $("knob").style.transform = `rotate(${knobAngle}deg)`;
 
-    // Update S-Meter reading (0 to 10)
-    function updateSMeter(level) {
-      const bars = sMeterBars.children;
-      const count = bars.length;
-      const activeCount = Math.round((level / 10) * count);
-
-      for (let i = 0; i < count; i++) {
-        if (i < activeCount) {
-          if (i > 10) {
-            bars[i].className = "flex-1 h-full rounded-[1px] bg-rose-500 shadow-[0_0_4px_#f43f5e]";
-          } else if (i > 6) {
-            bars[i].className = "flex-1 h-full rounded-[1px] bg-amber-400";
-          } else {
-            bars[i].className = "flex-1 h-full rounded-[1px] bg-emerald-400";
-          }
+      if (state.vfo) {
+        const stepHz = STEPS[state.stepIdx] * 1000;
+        // Snap to the step grid, then move one step
+        const snapped = Math.round(state.hz / stepHz) * stepHz;
+        let hz = snapped === state.hz ? state.hz + direction * stepHz : snapped;
+        if (hz > BAND_MAX) hz = BAND_MIN;
+        if (hz < BAND_MIN) hz = BAND_MAX;
+        state.hz = hz;
+        state.memKey = null;
+        afterTune(900);
+      } else {
+        const list = memoryChannels();
+        let idx = list.findIndex(c => c.key === state.memKey);
+        if (idx === -1) {
+          // Not on a memory: jump to the nearest one in that direction
+          idx = direction > 0 ? list.findIndex(c => c.hz > state.hz) : list.map(c => c.hz < state.hz).lastIndexOf(true);
+          if (idx === -1) idx = direction > 0 ? 0 : list.length - 1;
         } else {
-          bars[i].className = "flex-1 h-full rounded-[1px] bg-slate-800/80";
+          idx = (idx + direction + list.length) % list.length;
         }
+        const ch = list[idx];
+        state.hz = ch.hz;
+        state.mode = ch.mode;
+        state.memKey = ch.key;
+        afterTune(900);
       }
     }
 
-    // Audio Visualizer Canvas Loop
-    function startVisualizer() {
-      const canvas = scopeCanvas;
-      const ctx = canvas.getContext("2d");
-      const bufferLength = analyserNode.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
-
-      function renderFrame() {
-        animationFrameId = requestAnimationFrame(renderFrame);
-        canvas.width = canvas.clientWidth;
-        canvas.height = canvas.clientHeight;
-
-        analyserNode.getByteFrequencyData(dataArray);
-
-        ctx.fillStyle = "#020617";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // Check if there is actual audio activity
-        let sum = 0;
-        for (let i = 0; i < bufferLength; i++) {
-          sum += dataArray[i];
-        }
-
-        if (sum > 20 && isPlaying) {
-          noSignalPlaceholder.classList.add("hidden");
-          const barWidth = (canvas.width / bufferLength) * 1.8;
-          let x = 0;
-
-          for (let i = 0; i < bufferLength; i++) {
-            const barHeight = (dataArray[i] / 255) * canvas.height * 0.95;
-            
-            // Neon gradient fill
-            const grad = ctx.createLinearGradient(0, canvas.height, 0, 0);
-            grad.addColorStop(0, "#059669");
-            grad.addColorStop(0.7, "#10b981");
-            grad.addColorStop(1, "#38bdf8");
-            
-            ctx.fillStyle = grad;
-            ctx.fillRect(x, canvas.height - barHeight, barWidth - 1, barHeight);
-            x += barWidth;
-          }
-        } else {
-          if (!isPlaying && !squelchOpen) {
-            noSignalPlaceholder.classList.remove("hidden");
-          } else {
-            noSignalPlaceholder.classList.add("hidden");
-            // Draw subtle static carrier floor
-            ctx.strokeStyle = "rgba(16, 185, 129, 0.3)";
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            for (let i = 0; i < canvas.width; i += 6) {
-              const noiseY = (canvas.height / 2) + (Math.random() * 8 - 4);
-              if (i === 0) ctx.moveTo(i, noiseY);
-              else ctx.lineTo(i, noiseY);
-            }
-            ctx.stroke();
-          }
-        }
-      }
-
-      renderFrame();
+    function afterTune(delay) {
+      save();
+      updateDisplay();
+      renderChannels();
+      scheduleRetune(delay);
     }
 
-    // Render Channel List in Sidebar
-    function renderChannelList() {
-      const query = channelSearch.value.toLowerCase().trim();
-      const filtered = channels.filter(ch => {
-        const matchesCategory = currentCategoryFilter === "all" || ch.category === currentCategoryFilter;
-        const matchesQuery = ch.name.toLowerCase().includes(query) || 
-                             ch.callsign.toLowerCase().includes(query) || 
-                             ch.frequency.toString().includes(query) ||
-                             ch.location.toLowerCase().includes(query);
-        return matchesCategory && matchesQuery;
+    // --- DISPLAY -------------------------------------------------------------
+    function updateDisplay() {
+      const mhz = (state.hz / 1e6).toFixed(5);
+      $("freqMain").textContent = mhz.slice(0, 7);
+      $("freqSub").textContent = mhz.slice(7);
+
+      const ch = state.memKey ? findChannel(state.memKey) : null;
+      const rx = receiver();
+      if (ch) {
+        $("lcdTitle").textContent = ch.title;
+        const km = ch.lat != null ? ` · ${Math.round(distanceKm(rx.lat, rx.lon, ch.lat, ch.lon))} km from receiver` : "";
+        $("lcdDetail").textContent = ch.sub + km;
+      } else {
+        const seg = BAND_SEGMENTS.find(s => state.hz / 1e6 >= s.from && state.hz / 1e6 < s.to);
+        $("lcdTitle").textContent = "VFO";
+        $("lcdDetail").textContent = seg && seg.label ? `Band plan: ${seg.label}` : "Band plan: beacons";
+      }
+
+      $("lcdMode").textContent = state.mode.toUpperCase();
+      $("lcdStep").textContent = `STEP ${STEPS[state.stepIdx]}k`;
+      $("lcdSql").textContent = SQL_DB[state.sqlIdx] === null ? "SQL OFF" : `SQL ${SQL_DB[state.sqlIdx]}dB`;
+      $("lcdMem").textContent = state.vfo ? "VFO" : "MEM";
+      $("lcdRx").textContent = `RX ${rx.name.toUpperCase()}`;
+
+      $("vfoMemLabel").textContent = state.vfo ? "VFO" : "MEM";
+      $("btnStep").textContent = `STEP: ${STEPS[state.stepIdx]}k`;
+      $("btnMode").textContent = `MODE: ${state.mode.toUpperCase()}`;
+      $("sqlSlider").value = state.sqlIdx;
+      $("sqlText").textContent = SQL_DB[state.sqlIdx] === null ? "OFF" : `${SQL_DB[state.sqlIdx]} dB`;
+
+      $("rxName").textContent = `${rx.name} · ${rx.place}`;
+      $("rxMeta").textContent = `${rx.note} · ${rx.slots} listener slot${rx.slots === 1 ? "" : "s"} · ${rx.url.replace(/^https:\/\//, "").replace(/\/$/, "")}`;
+      $("btnNewTab").href = tunedUrl(rx.url);
+
+      const pct = (state.hz - BAND_MIN) / (BAND_MAX - BAND_MIN) * 100;
+      $("bandMarker").style.left = `calc(${pct}% - 1px)`;
+
+      document.querySelectorAll("#linkOnlyList a").forEach(a => { a.href = tunedUrl(a.dataset.base); });
+    }
+
+    function buildBandStrip() {
+      const strip = $("bandStrip");
+      strip.innerHTML = "";
+      for (const s of BAND_SEGMENTS) {
+        const seg = document.createElement("div");
+        seg.style.width = `${(s.to - s.from) / 2 * 100}%`;
+        seg.style.background = s.color + "33";
+        seg.style.borderRight = "1px solid rgba(0,0,0,0.5)";
+        seg.className = "h-full flex items-center justify-center overflow-hidden text-[9px] font-lcd whitespace-nowrap";
+        seg.style.color = s.color;
+        seg.textContent = s.label;
+        seg.title = `${s.from.toFixed(3)}–${s.to.toFixed(3)} MHz ${s.label}`;
+        strip.appendChild(seg);
+      }
+      const marker = document.createElement("div");
+      marker.id = "bandMarker";
+      marker.className = "absolute top-0 bottom-0 w-0.5 lcd-marker transition-all duration-150";
+      strip.appendChild(marker);
+    }
+
+    // Ticks under the strip for FM repeaters near the receiver
+    function buildBandTicks() {
+      const ticks = $("bandTicks");
+      ticks.innerHTML = "";
+      for (const c of nearbyRepeaters().filter(c => c.analogue)) {
+        const t = document.createElement("div");
+        t.className = "absolute top-0 w-px h-2 lcd-marker opacity-60";
+        t.style.left = `${(c.hz - BAND_MIN) / (BAND_MAX - BAND_MIN) * 100}%`;
+        t.title = `${c.call} ${fmtMHz(c.hz)}`;
+        ticks.appendChild(t);
+      }
+    }
+
+    function renderReceivers() {
+      const list = $("receiverList");
+      list.innerHTML = "";
+      for (const rx of RECEIVERS) {
+        const active = rx.id === state.rxId;
+        const b = document.createElement("button");
+        b.className = `text-left px-3 py-2 rounded-lg border transition ${active ? "bg-emerald-950/40 border-emerald-500/60" : "bg-slate-950/60 border-slate-800 hover:border-slate-600"}`;
+        b.innerHTML = `
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-xs font-semibold ${active ? "text-emerald-300" : "text-slate-200"}">${escapeHtml(rx.name)}</span>
+            <span class="text-[10px] font-mono text-slate-500">${rx.slots} slot${rx.slots === 1 ? "" : "s"}</span>
+          </div>
+          <div class="text-[11px] text-slate-400">${escapeHtml(rx.place)} · ${escapeHtml(rx.note)}</div>`;
+        b.addEventListener("click", () => {
+          if (rx.id === state.rxId) return;
+          state.rxId = rx.id;
+          save();
+          renderReceivers();
+          buildBandTicks();
+          updateDisplay();
+          renderChannels();
+          scheduleRetune(100);
+        });
+        list.appendChild(b);
+      }
+    }
+
+    function renderLinkOnly() {
+      const list = $("linkOnlyList");
+      list.innerHTML = LINK_ONLY_RECEIVERS.map(r => `
+        <a data-base="${escapeHtml(r.url)}" target="_blank" rel="noopener"
+           class="flex justify-between gap-2 px-2 py-1 rounded bg-slate-950/60 border border-slate-800 hover:border-slate-600 text-[11px]">
+          <span class="text-slate-200">${escapeHtml(r.name)}</span>
+          <span class="text-slate-500 truncate">${escapeHtml(r.place)}</span>
+        </a>`).join("");
+    }
+
+    function renderChannels() {
+      document.querySelectorAll(".tab-btn").forEach(b => {
+        const on = b.dataset.tab === state.tab;
+        b.classList.toggle("bg-cyan-600", on);
+        b.classList.toggle("text-white", on);
+        b.classList.toggle("bg-slate-800", !on);
+        b.classList.toggle("text-slate-300", !on);
       });
 
-      channelCountBadge.textContent = `${filtered.length} Channels`;
-      channelList.innerHTML = "";
+      const query = $("channelSearch").value.toLowerCase().trim();
+      const analogueOnly = $("analogueOnly").checked;
+      let items;
+      if (state.tab === "band") items = BAND_CHANNELS;
+      else if (state.tab === "near") items = nearbyRepeaters();
+      else items = REPEATER_CHANNELS;
 
-      if (filtered.length === 0) {
-        channelList.innerHTML = `
-          <div class="text-center py-8 text-slate-500 font-mono text-xs">
-            No matching 2M channels found.
-          </div>
-        `;
+      items = items.filter(c => {
+        if (analogueOnly && c.tag === "RPT" && !c.analogue) return false;
+        if (!query) return true;
+        return c.title.toLowerCase().includes(query) || fmtMHz(c.hz).includes(query) || c.sub.toLowerCase().includes(query);
+      });
+
+      $("channelCount").textContent = `${items.length} channel${items.length === 1 ? "" : "s"}`;
+      const list = $("channelList");
+
+      if (items.length === 0) {
+        list.innerHTML = `<div class="text-center py-8 text-slate-500 font-mono text-xs">${state.tab === "near" ? "No repeaters within 90 km of this receiver." : "No matching channels."}</div>`;
         return;
       }
 
-      filtered.forEach((ch) => {
-        const originalIndex = channels.findIndex(c => c.id === ch.id);
-        const isCurrent = originalIndex === activeChannelIndex;
-
-        const card = document.createElement("div");
-        card.className = `p-3 rounded-xl border transition cursor-pointer flex flex-col gap-1.5 ${
-          isCurrent 
-            ? "bg-emerald-950/40 border-emerald-500/60 shadow-lg ring-1 ring-emerald-500/30" 
-            : "bg-slate-900/60 border-slate-800 hover:bg-slate-850 hover:border-slate-700"
-        }`;
-
+      list.innerHTML = "";
+      for (const c of items) {
+        const current = c.key === state.memKey;
+        const card = document.createElement("button");
+        card.className = `text-left p-3 rounded-xl border transition flex flex-col gap-1 ${current ? "bg-emerald-950/40 border-emerald-500/60 ring-1 ring-emerald-500/30" : "bg-slate-900/60 border-slate-800 hover:border-slate-600"}`;
+        const km = c.km != null ? `${Math.round(c.km)} km` : (c.lat != null ? `${Math.round(distanceKm(receiver().lat, receiver().lon, c.lat, c.lon))} km` : "");
         card.innerHTML = `
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <span class="font-lcd font-bold text-base ${isCurrent ? 'text-emerald-300' : 'text-slate-100'}">
-                ${ch.frequency.toFixed(3)} MHz
-              </span>
-              <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-mono border border-slate-700">
-                ${ch.callsign}
-              </span>
-            </div>
-            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded ${
-              ch.category === 'repeater' ? 'bg-cyan-950 text-cyan-300 border border-cyan-800/40' :
-              ch.category === 'space' ? 'bg-purple-950 text-purple-300 border border-purple-800/40' :
-              ch.category === 'news' ? 'bg-amber-950 text-amber-300 border border-amber-800/40' :
-              'bg-emerald-950 text-emerald-300 border border-emerald-800/40'
-            }">
-              ${ch.category.toUpperCase()}
+          <div class="flex items-center justify-between gap-2">
+            <span class="font-lcd font-bold text-base ${current ? "text-emerald-300" : "text-slate-100"}">${fmtMHz(c.hz)}</span>
+            <span class="flex items-center gap-1.5">
+              ${km ? `<span class="text-[10px] font-mono text-slate-500">${km}</span>` : ""}
+              <span class="text-[10px] font-mono px-1.5 py-0.5 rounded ${c.tag === "BAND" ? "bg-cyan-950 text-cyan-300" : c.analogue ? "bg-purple-950 text-purple-300" : "bg-slate-800 text-slate-400"}">${c.tag === "BAND" ? c.mode.toUpperCase() : c.analogue ? "RPT" : "DIGITAL"}</span>
             </span>
           </div>
+          <div class="text-xs font-medium text-slate-300 truncate">${escapeHtml(c.title)}</div>
+          <div class="text-[11px] text-slate-500 font-mono truncate">${escapeHtml(c.sub)}</div>`;
+        card.addEventListener("click", () => selectChannel(c));
+        list.appendChild(card);
+      }
+    }
 
-          <div class="text-xs font-medium text-slate-300 truncate">
-            ${ch.name}
-          </div>
-
-          <div class="flex items-center justify-between text-[11px] text-slate-400 font-mono pt-1 border-t border-slate-800/60">
-            <span class="truncate max-w-[180px]">${ch.location}</span>
-            <span>Tone: ${ch.tone || 'None'}</span>
-          </div>
-        `;
-
-        card.addEventListener("click", () => {
-          selectChannel(originalIndex);
-        });
-
-        channelList.appendChild(card);
+    function applyTheme() {
+      $("lcd").dataset.theme = state.theme;
+      document.querySelectorAll("[data-theme-btn]").forEach(b => {
+        const on = b.dataset.themeBtn === state.theme;
+        b.classList.toggle("ring-2", on);
+        b.classList.toggle("ring-white/40", on);
+        b.classList.toggle("opacity-60", !on);
       });
     }
 
-    // Select and tune a specific channel
-    function selectChannel(index) {
-      if (index < 0 || index >= channels.length) return;
-      activeChannelIndex = index;
-      const ch = channels[activeChannelIndex];
-
-      isVfoMode = false;
-      currentVfoFreq = ch.frequency;
-
-      updateTransceiverDisplay();
-      renderChannelList();
-
-      if (isPlaying) {
-        loadAndPlayStream(ch);
-      }
-    }
-
-    // Update Transceiver LCD Details
-    function updateTransceiverDisplay() {
-      const ch = channels[activeChannelIndex];
-      const freq = isVfoMode ? currentVfoFreq : ch.frequency;
-      
-      const freqParts = freq.toFixed(3).split('.');
-      freqMain.textContent = freqParts[0] + '.' + freqParts[1].substring(0, 2);
-      freqSub.textContent = '.' + (freqParts[1][2] || '0') + '0';
-
-      channelNameDisplay.textContent = isVfoMode ? `VFO Manual Tune • ${freq.toFixed(3)} MHz` : ch.name;
-      channelSubDetails.textContent = isVfoMode 
-        ? `Step: ${currentStepKHz}kHz • Simplex / Standard Split` 
-        : `Call: ${ch.callsign} • Loc: ${ch.location} • Tone: ${ch.tone}`;
-
-      displayMode.textContent = ch.mode || "FM 25k";
-      displayOffset.textContent = ch.offset || "SIMPLEX";
-      displayTone.textContent = ch.tone ? `TONE ${ch.tone}` : "CSQ";
-      memoryChannelTag.textContent = isVfoMode ? "VFO-A" : `CH-${(activeChannelIndex + 1).toString().padStart(2, '0')}`;
-      activeSourceType.textContent = ch.category.toUpperCase() + " SOURCE";
-
-      // S-Meter update based on stream signal strength
-      if (isPlaying) {
-        updateSMeter(ch.signalLevel || 8.0);
-      } else {
-        updateSMeter(0);
-      }
-    }
-
-    // Load and play selected station stream
-    function loadAndPlayStream(channel) {
-      initAudioContext();
-      if (audioCtx.state === "suspended") {
-        audioCtx.resume();
-      }
-
-      setRxTxState("rx");
-      streamStatusBadge.className = "flex items-center gap-1.5 text-amber-300";
-      streamStatusText.textContent = "Connecting to feed...";
-      
-      // Reset noise hiss while loading
-      setNoiseHiss(false);
-
-      // Attempt stream playback with robust error handling
-      audioElement.src = channel.streamUrl;
-      audioElement.load();
-
-      const playPromise = audioElement.play();
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            streamStatusBadge.className = "flex items-center gap-1.5 text-emerald-300";
-            streamStatusText.textContent = "Live Stream Connected";
-            updateSMeter(channel.signalLevel || 8.5);
-            isPlaying = true;
-            updatePlayButtonUI();
-          })
-          .catch((err) => {
-            console.warn("Direct stream failed (CORS/Offline), switching to emergency radio dispatch synthesis...", err);
-            // If online stream fails or has CORS/Mixed content, fallback smoothly to simulated net traffic so user always enjoys a working radio experience!
-            fallbackToRadioDispatchSimulation(channel);
-          });
-      }
-    }
-
-    // Synthesized Radio Simulation fallback when external feed is temporarily unreachable
-    function fallbackToRadioDispatchSimulation(channel) {
-      streamStatusBadge.className = "flex items-center gap-1.5 text-sky-400";
-      streamStatusText.textContent = "Synthesized Net Active (Live Audio Restricted)";
-      isPlaying = true;
-      updatePlayButtonUI();
-      updateSMeter(channel.signalLevel || 7.5);
-
-      // Create realistic background carrier presence with periodic transmission beeps
-      if (audioCtx) {
-        playRogerBeep();
-      }
-    }
-
-    // Toggle Play / Receive
-    function togglePlay() {
-      initAudioContext();
-      if (isPlaying) {
-        audioElement.pause();
-        audioElement.src = "";
-        isPlaying = false;
-        setRxTxState("standby");
-        setNoiseHiss(squelchOpen);
-        updateSMeter(0);
-        streamStatusBadge.className = "flex items-center gap-1.5 text-slate-400";
-        streamStatusText.textContent = "Standby";
-      } else {
-        const ch = channels[activeChannelIndex];
-        loadAndPlayStream(ch);
-      }
-      updatePlayButtonUI();
-    }
-
-    function updatePlayButtonUI() {
-      if (isPlaying) {
-        btnPlayStream.classList.remove("bg-emerald-600", "hover:bg-emerald-500");
-        btnPlayStream.classList.add("bg-amber-600", "hover:bg-amber-500");
-        playBtnLabel.textContent = "DISCONNECT";
-        playIcon.innerHTML = `
-          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path>
-        `;
-      } else {
-        btnPlayStream.classList.remove("bg-amber-600", "hover:bg-amber-500");
-        btnPlayStream.classList.add("bg-emerald-600", "hover:bg-emerald-500");
-        playBtnLabel.textContent = "RECEIVE";
-        playIcon.innerHTML = `
-          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path>
-        `;
-      }
-    }
-
-    // Squelch Noise Gate control
-    function setNoiseHiss(open) {
-      if (!noiseGainNode || !audioCtx) return;
-      const targetGain = open ? 0.35 : 0.0;
-      noiseGainNode.gain.cancelScheduledValues(audioCtx.currentTime);
-      noiseGainNode.gain.linearRampToValueAtTime(targetGain, audioCtx.currentTime + 0.08);
-      squelchStateTag.textContent = open ? "SQL: OPEN (HISS)" : "SQL: CLOSED";
-      squelchStateTag.className = open ? "text-amber-400 font-bold" : "text-emerald-500 font-bold";
-    }
-
-    // Handle RX / TX / STANDBY status LED
-    function setRxTxState(state) {
-      const rxTxIndicator = document.getElementById("rxTxIndicator");
-      if (state === "tx") {
-        rxLed.className = "w-2.5 h-2.5 rounded-full bg-rose-500 shadow-[0_0_8px_#f43f5e]";
-        rxLabel.textContent = "TRANSMIT (50W)";
-        rxLabel.className = "text-rose-400 font-bold";
-        rxTxIndicator.className = "flex items-center gap-1.5 text-xs font-mono font-bold px-2 py-0.5 rounded bg-rose-950/80 border border-rose-500/50";
-      } else if (state === "rx") {
-        rxLed.className = "w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]";
-        rxLabel.textContent = "BUSY / RX";
-        rxLabel.className = "text-emerald-300 font-bold";
-        rxTxIndicator.className = "flex items-center gap-1.5 text-xs font-mono font-bold px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/50";
-      } else {
-        rxLed.className = "w-2.5 h-2.5 rounded-full bg-slate-600";
-        rxLabel.textContent = "STANDBY";
-        rxLabel.className = "text-slate-400";
-        rxTxIndicator.className = "flex items-center gap-1.5 text-xs font-mono font-bold px-2 py-0.5 rounded bg-slate-800/90 text-slate-500 border border-slate-700";
-      }
-    }
-
-    // Rotary Dial Step Tuning
+    // --- CONTROLS ------------------------------------------------------------
     let knobAngle = 0;
-    function stepTune(direction) {
-      const delta = (currentStepKHz / 1000) * direction;
-      knobAngle += direction * 25;
-      mainTuningKnob.style.transform = `rotate(${knobAngle}deg)`;
+    const knob = $("knob");
+    let dragY = null;
 
-      if (!isVfoMode) {
-        // In Memory mode, tune to next preset channel
-        let nextIndex = activeChannelIndex + direction;
-        if (nextIndex >= channels.length) nextIndex = 0;
-        if (nextIndex < 0) nextIndex = channels.length - 1;
-        selectChannel(nextIndex);
-      } else {
-        // In VFO mode, tune frequency directly
-        currentVfoFreq += delta;
-        if (currentVfoFreq > 148.000) currentVfoFreq = 144.000;
-        if (currentVfoFreq < 144.000) currentVfoFreq = 148.000;
-        currentVfoFreq = Math.round(currentVfoFreq * 1000) / 1000;
-        updateTransceiverDisplay();
-        
-        // If squelch is open, play brief dial click
-        if (audioCtx) {
-          playKeyClick();
-        }
+    function dragStart(y) { dragY = y; }
+    function dragMove(y) {
+      if (dragY === null) return;
+      const dy = dragY - y;
+      if (Math.abs(dy) > 16) {
+        stepTune(dy > 0 ? 1 : -1);
+        dragY = y;
       }
     }
+    function dragEnd() { dragY = null; }
 
-    // Memory Scanner Loop
-    function toggleScan() {
-      initAudioContext();
-      if (isScanning) {
-        clearInterval(scanInterval);
-        isScanning = false;
-        scanBtnLabel.textContent = "SCAN";
-        btnScan.classList.remove("bg-cyan-700", "text-cyan-200");
-      } else {
-        isScanning = true;
-        scanBtnLabel.textContent = "STOP";
-        btnScan.classList.add("bg-cyan-700", "text-cyan-200");
-
-        scanInterval = setInterval(() => {
-          let nextIndex = (activeChannelIndex + 1) % channels.length;
-          selectChannel(nextIndex);
-          // If a channel has high signal, scanner could pause
-          if (channels[nextIndex].signalLevel >= 9.0 && isPlaying) {
-            // Emulate carrier detect pause
-          }
-        }, 1600);
-      }
-    }
-
-    // Push-to-Talk (PTT) Simulation
-    let isTransmitting = false;
-    function startPTT() {
-      initAudioContext();
-      if (isTransmitting) return;
-      isTransmitting = true;
-      setRxTxState("tx");
-      playKeyClick();
-      updateSMeter(10); // Peg meter to 10 on transmit
-      if (audioElement && isPlaying) {
-        audioElement.muted = true;
-      }
-    }
-
-    function endPTT() {
-      if (!isTransmitting) return;
-      isTransmitting = false;
-      setRxTxState(isPlaying ? "rx" : "standby");
-      updateSMeter(isPlaying ? channels[activeChannelIndex].signalLevel : 0);
-      if (audioElement && isPlaying) {
-        audioElement.muted = false;
-      }
-      // Send roger beep
-      playRogerBeep();
-    }
-
-    // Tuning Dial drag & wheel handlers
-    let isDraggingDial = false;
-    let startY = 0;
-
-    mainTuningKnob.addEventListener("mousedown", (e) => {
-      isDraggingDial = true;
-      startY = e.clientY;
-      initAudioContext();
-    });
-
-    window.addEventListener("mousemove", (e) => {
-      if (!isDraggingDial) return;
-      const deltaY = startY - e.clientY;
-      if (Math.abs(deltaY) > 18) {
-        stepTune(deltaY > 0 ? 1 : -1);
-        startY = e.clientY;
-      }
-    });
-
-    window.addEventListener("mouseup", () => {
-      isDraggingDial = false;
-    });
-
-    // Touch Support for mobile knob turning
-    mainTuningKnob.addEventListener("touchstart", (e) => {
-      isDraggingDial = true;
-      startY = e.touches[0].clientY;
-      initAudioContext();
-    }, { passive: true });
-
-    window.addEventListener("touchmove", (e) => {
-      if (!isDraggingDial) return;
-      const deltaY = startY - e.touches[0].clientY;
-      if (Math.abs(deltaY) > 16) {
-        stepTune(deltaY > 0 ? 1 : -1);
-        startY = e.touches[0].clientY;
-      }
-    }, { passive: true });
-
-    window.addEventListener("touchend", () => {
-      isDraggingDial = false;
-    });
-
-    // Mouse wheel support over the knob
-    mainTuningKnob.addEventListener("wheel", (e) => {
+    knob.addEventListener("mousedown", e => dragStart(e.clientY));
+    window.addEventListener("mousemove", e => dragMove(e.clientY));
+    window.addEventListener("mouseup", dragEnd);
+    knob.addEventListener("touchstart", e => dragStart(e.touches[0].clientY), { passive: true });
+    window.addEventListener("touchmove", e => dragMove(e.touches[0].clientY), { passive: true });
+    window.addEventListener("touchend", dragEnd);
+    knob.addEventListener("wheel", e => {
       e.preventDefault();
-      initAudioContext();
       stepTune(e.deltaY < 0 ? 1 : -1);
     }, { passive: false });
 
-    dialTuneDown.addEventListener("click", () => stepTune(-1));
-    dialTuneUp.addEventListener("click", () => stepTune(1));
+    $("tuneDown").addEventListener("click", () => stepTune(-1));
+    $("tuneUp").addEventListener("click", () => stepTune(1));
 
-    // Button Events
-    btnPlayStream.addEventListener("click", togglePlay);
-    btnScan.addEventListener("click", toggleScan);
-
-    // Squelch Off / Monitor Button
-    btnMon.addEventListener("click", () => {
-      initAudioContext();
-      squelchOpen = !squelchOpen;
-      if (squelchOpen) {
-        btnMon.classList.add("bg-amber-600", "text-white");
-        monBtnLabel.textContent = "SQL OPEN";
-        setNoiseHiss(true);
-      } else {
-        btnMon.classList.remove("bg-amber-600", "text-white");
-        monBtnLabel.textContent = "SQL OFF";
-        setNoiseHiss(false);
-      }
+    window.addEventListener("keydown", e => {
+      if (e.target.closest && e.target.closest("input, textarea, select, button, a")) return;
+      if (e.key === "ArrowRight" || e.key === "ArrowUp") { e.preventDefault(); stepTune(1); }
+      if (e.key === "ArrowLeft" || e.key === "ArrowDown") { e.preventDefault(); stepTune(-1); }
     });
 
-    // PTT Press & Hold
-    btnPtt.addEventListener("mousedown", startPTT);
-    window.addEventListener("mouseup", endPTT);
-    btnPtt.addEventListener("touchstart", (e) => {
-      e.preventDefault();
-      startPTT();
-    });
-    btnPtt.addEventListener("touchend", (e) => {
-      e.preventDefault();
-      endPTT();
+    $("btnPower").addEventListener("click", () => setPower(!state.on));
+    $("btnReload").addEventListener("click", () => { if (state.on) loadFrame(); else setPower(true); });
+
+    $("btnVfoMem").addEventListener("click", () => {
+      state.vfo = !state.vfo;
+      save();
+      updateDisplay();
     });
 
-    // VFO / Memory Toggle
-    btnVfoMem.addEventListener("click", () => {
-      isVfoMode = !isVfoMode;
-      btnVfoMem.textContent = isVfoMode ? "MODE: VFO" : "MODE: MEM";
-      btnVfoMem.className = isVfoMode 
-        ? "py-1.5 px-2 rounded bg-cyan-700 text-white font-mono border border-cyan-500" 
-        : "py-1.5 px-2 rounded bg-slate-800/90 text-slate-300 font-mono border border-slate-700";
-      updateTransceiverDisplay();
+    $("btnStep").addEventListener("click", () => {
+      state.stepIdx = (state.stepIdx + 1) % STEPS.length;
+      save();
+      updateDisplay();
     });
 
-    // Step Size Cycle
-    const STEPS = [5, 10, 12.5, 20, 25];
-    let stepIndex = 2; // 12.5 kHz
-    btnStepToggle.addEventListener("click", () => {
-      stepIndex = (stepIndex + 1) % STEPS.length;
-      currentStepKHz = STEPS[stepIndex];
-      btnStepToggle.textContent = `STEP: ${currentStepKHz}k`;
-      stepDisplay.textContent = `STEP ${currentStepKHz}k`;
+    $("btnMode").addEventListener("click", () => {
+      state.mode = MODES[(MODES.indexOf(state.mode) + 1) % MODES.length];
+      afterTune(700);
     });
 
-    // Roger Beep Toggle
-    btnRogerToggle.addEventListener("click", () => {
-      rogerBeepEnabled = !rogerBeepEnabled;
-      btnRogerToggle.textContent = rogerBeepEnabled ? "BEEP: ON" : "BEEP: OFF";
-      rogerBeepStatus.textContent = rogerBeepEnabled ? "ROGER: ON" : "ROGER: OFF";
+    $("sqlSlider").addEventListener("input", e => {
+      state.sqlIdx = parseInt(e.target.value, 10);
+      afterTune(700);
     });
 
-    // Band Cycle
-    const BAND_PRESETS = [144.200, 145.800, 146.520, 146.880, 147.240];
-    let bandPresetIndex = 2;
-    btnBandCycle.addEventListener("click", () => {
-      bandPresetIndex = (bandPresetIndex + 1) % BAND_PRESETS.length;
-      currentVfoFreq = BAND_PRESETS[bandPresetIndex];
-      isVfoMode = true;
-      btnVfoMem.textContent = "MODE: VFO";
-      updateTransceiverDisplay();
-      playKeyClick();
-    });
+    document.querySelectorAll(".tab-btn").forEach(b => b.addEventListener("click", () => {
+      state.tab = b.dataset.tab;
+      save();
+      renderChannels();
+    }));
+    $("channelSearch").addEventListener("input", renderChannels);
+    $("analogueOnly").addEventListener("change", renderChannels);
 
-    // Volume Slider
-    volSlider.addEventListener("input", (e) => {
-      currentVolume = e.target.value / 100;
-      volLevelText.textContent = `${e.target.value}%`;
-      if (gainNode && audioCtx) {
-        gainNode.gain.setValueAtTime(currentVolume, audioCtx.currentTime);
-      }
-    });
+    document.querySelectorAll("[data-theme-btn]").forEach(b => b.addEventListener("click", () => {
+      state.theme = b.dataset.themeBtn;
+      save();
+      applyTheme();
+    }));
 
-    // Squelch Slider
-    sqlSlider.addEventListener("input", (e) => {
-      squelchThreshold = parseInt(e.target.value, 10);
-      sqlLevelText.textContent = squelchThreshold === 0 ? "OPEN" : `S-${squelchThreshold}`;
-      // When squelch is dialed to 0, open hiss
-      if (squelchThreshold === 0) {
-        setNoiseHiss(true);
-      } else if (!squelchOpen) {
-        setNoiseHiss(false);
-      }
-    });
+    const infoModal = $("infoModal");
+    $("btnOpenInfo").addEventListener("click", () => infoModal.classList.remove("hidden"));
+    infoModal.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", () => infoModal.classList.add("hidden")));
+    infoModal.addEventListener("click", e => { if (e.target === infoModal) infoModal.classList.add("hidden"); });
 
-    // Filter Buttons
-    document.querySelectorAll(".category-btn").forEach(btn => {
-      btn.addEventListener("click", () => {
-        document.querySelectorAll(".category-btn").forEach(b => {
-          b.classList.remove("active", "bg-cyan-600", "text-white");
-          b.classList.add("bg-slate-800", "text-slate-300");
-        });
-        btn.classList.add("active", "bg-cyan-600", "text-white");
-        btn.classList.remove("bg-slate-800", "text-slate-300");
-        currentCategoryFilter = btn.dataset.cat;
-        renderChannelList();
-      });
-    });
-
-    channelSearch.addEventListener("input", renderChannelList);
-
-    // Audio Error / State Listeners
-    audioElement.addEventListener("playing", () => {
-      isPlaying = true;
-      updatePlayButtonUI();
-      setRxTxState("rx");
-      streamStatusBadge.className = "flex items-center gap-1.5 text-emerald-300";
-      streamStatusText.textContent = "Audio Streaming";
-    });
-
-    audioElement.addEventListener("error", (e) => {
-      if (isPlaying) {
-        fallbackToRadioDispatchSimulation(channels[activeChannelIndex]);
-      }
-    });
-
-    // LCD Color Themes
-    const lcdContainer = document.getElementById("lcdContainer");
-    document.getElementById("themeEmerald").addEventListener("click", () => {
-      lcdContainer.className = "lcd-screen rounded-xl p-3 sm:p-5 relative border border-emerald-500/30 text-emerald-400 transition-colors duration-300";
-    });
-    document.getElementById("themeAmber").addEventListener("click", () => {
-      lcdContainer.className = "amber-lcd rounded-xl p-3 sm:p-5 relative border border-amber-500/30 text-amber-400 transition-colors duration-300";
-    });
-    document.getElementById("themeBlue").addEventListener("click", () => {
-      lcdContainer.className = "blue-lcd rounded-xl p-3 sm:p-5 relative border border-sky-500/30 text-sky-400 transition-colors duration-300";
-    });
-
-    // Custom Stream Modal Handlers
-    const customModal = document.getElementById("customStreamModal");
-    document.getElementById("btnOpenCustomModal").addEventListener("click", () => customModal.classList.remove("hidden"));
-    document.getElementById("btnCloseCustomModal").addEventListener("click", () => customModal.classList.add("hidden"));
-    document.getElementById("btnCancelCustomModal").addEventListener("click", () => customModal.classList.add("hidden"));
-
-    document.getElementById("customStreamForm").addEventListener("submit", (e) => {
-      e.preventDefault();
-      const newChannel = {
-        id: "custom-" + Date.now(),
-        name: document.getElementById("inputName").value.trim(),
-        callsign: document.getElementById("inputCallsign").value.trim() || "USER",
-        frequency: parseFloat(document.getElementById("inputFreq").value),
-        offset: "SIMPLEX",
-        tone: "100.0",
-        mode: "FM 25k",
-        location: "Custom User Feed",
-        category: document.getElementById("inputCategory").value,
-        streamUrl: document.getElementById("inputUrl").value.trim(),
-        signalLevel: 8.5
-      };
-
-      channels.unshift(newChannel);
-      customModal.classList.add("hidden");
-      e.target.reset();
-      selectChannel(0);
-    });
-
-    // Info Modal Handlers
-    const infoModal = document.getElementById("infoModal");
-    document.getElementById("btnOpenInfoModal").addEventListener("click", () => infoModal.classList.remove("hidden"));
-    document.getElementById("btnCloseInfoModal").addEventListener("click", () => infoModal.classList.add("hidden"));
-    document.getElementById("btnDismissInfoModal").addEventListener("click", () => infoModal.classList.add("hidden"));
-
-    // Initial Startup
-    window.addEventListener("DOMContentLoaded", () => {
-      buildSMeter();
-      updateTransceiverDisplay();
-      renderChannelList();
-    });
+    // --- START ---------------------------------------------------------------
+    loadSaved();
+    $("rptDate").textContent = REPEATERS_UPDATED;
+    buildBandStrip();
+    buildBandTicks();
+    renderReceivers();
+    renderLinkOnly();
+    applyTheme();
+    updateDisplay();
+    renderChannels();
   </script>
 </body>
 </html>
